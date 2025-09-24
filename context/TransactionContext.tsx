@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext } from 'react'
+import React, { useState, useEffect, createContext, ReactNode } from 'react'
 import {
   useAccount,
   useSendTransaction,
@@ -23,7 +23,7 @@ const defaultCtx = {
 export const TransactionContext = createContext(defaultCtx)
 
 // Named export (funzione)
-export function TransactionProvider({ children }) {
+export function TransactionProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const { address: currentAccount, isConnected } = useAccount()
 
@@ -58,7 +58,7 @@ export function TransactionProvider({ children }) {
     setFormData((prev) => ({ ...prev, [key]: e.target.value }))
   }
 
-  const saveTransaction = async (hash, amount, fromAddress, toAddress) => {
+  const saveTransaction = async (hash: string, amount: string, fromAddress: string, toAddress: string) => {
     try {
       const txDoc = {
         _type: 'transactions',
