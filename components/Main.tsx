@@ -218,6 +218,9 @@ const Main: React.FC = () => {
   const router = useRouter()
   const { formData, handleChange, isLoading } = useContext(TransactionContext)
 
+  // Wrapper tipizzato per evitare errori TS su firme diverse
+  const ctxHandleChange = (e: any, name: string) => (handleChange as any)(e, name)
+
   useEffect(() => { if (typeof window !== 'undefined') Modal.setAppElement('#__next') }, [])
 
   // Non far crashare la pagina su errori noti
@@ -582,7 +585,7 @@ const Main: React.FC = () => {
                     let raw = payRB.raw
                     if (payToken.address === 'native' && raw > 2000000000000000n) raw -= 2000000000000000n
                     const v = formatUnitsBI(raw, payRB.decimals, 18)
-                    setAmountIn(v); handleChange({ target: { value: v } } as any, 'amount')
+                    setAmountIn(v); ctxHandleChange({ target: { value: v } } as any, 'amount')
                   }}
                 >MAX</button>
               )}
@@ -603,7 +606,7 @@ const Main: React.FC = () => {
                 placeholder="0.0"
                 pattern="^[0-9]*[.,]?[0-9]*$"
                 value={amountIn}
-                onChange={(e) => { setAmountIn(e.target.value); handleChange(e, 'amount') }}
+                onChange={(e) => { setAmountIn(e.target.value); ctxHandleChange(e, 'amount') }}
               />
             </div>
           </div>
