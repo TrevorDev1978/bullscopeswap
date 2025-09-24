@@ -1,5 +1,10 @@
 import React, { useState, useEffect, createContext } from 'react'
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
+import {
+  useAccount,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from 'wagmi'
 import { parseEther } from 'viem'
 import { contractABI, contractAddress } from '../lib/constants'
 import { client } from '../lib/sanityClient'
@@ -7,7 +12,7 @@ import { useRouter } from 'next/router'
 
 const defaultCtx = {
   currentAccount: null,
-  connectWallet: () => {},          // RainbowKit gestisce la connessione
+  connectWallet: () => {}, // RainbowKit gestisce la connessione
   sendTransaction: () => {},
   handleChange: () => {},
   formData: { addressTo: '', amount: '' },
@@ -25,17 +30,32 @@ export function TransactionProvider({ children }) {
   const [formData, setFormData] = useState({ addressTo: '', amount: '' })
 
   // PATH A: native PLS
-  const { sendTransactionAsync, data: txHashNative, isPending: isSendingNative } = useSendTransaction()
+  const {
+    sendTransactionAsync,
+    data: txHashNative,
+    isPending: isSendingNative,
+  } = useSendTransaction()
   // PATH B: router (contratto)
-  const { writeContractAsync, data: txHashRouter, isPending: isSendingRouter } = useWriteContract()
+  const {
+    writeContractAsync,
+    data: txHashRouter,
+    isPending: isSendingRouter,
+  } = useWriteContract()
 
   const awaitedHash = txHashRouter ?? txHashNative
-  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({ hash: awaitedHash })
+  const {
+    isLoading: isConfirming,
+    isSuccess,
+    data: receipt,
+  } = useWaitForTransactionReceipt({ hash: awaitedHash })
 
   const isLoading = isSendingNative || isSendingRouter || isConfirming
 
-  const handleChange = (e, name) => {
-    setFormData(prev => ({ ...prev, [name]: e.target.value }))
+  // ✅ fix: accetta opzionale `name`
+  const handleChange = (e: any, name?: string) => {
+    const key = name || e?.target?.name
+    if (!key) return
+    setFormData((prev) => ({ ...prev, [key]: e.target.value }))
   }
 
   const saveTransaction = async (hash, amount, fromAddress, toAddress) => {
@@ -53,7 +73,9 @@ export function TransactionProvider({ children }) {
       await client
         .patch(fromAddress)
         .setIfMissing({ transactions: [] })
-        .insert('after', 'transactions[-1]', [{ _key: hash, _ref: hash, _type: 'reference' }])
+        .insert('after', 'transactions[-1]', [
+          { _key: hash, _ref: hash, _type: 'reference' },
+        ])
         .commit()
     } catch (e) {
       console.error('Sanity save error:', e)
@@ -62,7 +84,8 @@ export function TransactionProvider({ children }) {
 
   const sendTransaction = async () => {
     const { addressTo, amount } = formData
-    if (!isConnected) return console.warn('Wallet non connesso (usa Connect Wallet)')
+    if (!isConnected)
+      return console.warn('Wallet non connesso (usa Connect Wallet)')
     if (!addressTo || !amount) return
 
     try {
@@ -70,15 +93,14 @@ export function TransactionProvider({ children }) {
 
       if (useRouter) {
         // ===== ROUTER CALL =====
-        // Configura il nome funzione del tuo router via ENV o cambia qui:
-        const fnName = process.env.NEXT_PUBLIC_ROUTER_FN || 'publishTransaction'
+        const fnName =
+          process.env.NEXT_PUBLIC_ROUTER_FN || 'publishTransaction'
         const args = [
           addressTo,
           parseEther(amount),
           `Transaction PLS ${amount} to ${addressTo}`,
           'TRANSFER',
         ]
-        // Se la tua funzione NON è payable, rimuovi "value"
         await writeContractAsync({
           address: contractAddress,
           abi: contractABI,
@@ -130,7 +152,6 @@ export function TransactionProvider({ children }) {
     if (!isSuccess || !awaitedHash) return
     const to = receipt?.to || ''
     const from = currentAccount || ''
-    // NB: se vuoi l'importo preciso, conservalo in una ref prima di resettare formData
     saveTransaction(awaitedHash, formData.amount, from, to)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess, awaitedHash])
@@ -151,5 +172,5 @@ export function TransactionProvider({ children }) {
   )
 }
 
-// Default export (così qualsiasi import funziona)
+// Default export
 export default TransactionProvider
