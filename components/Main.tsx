@@ -582,7 +582,7 @@ const Main: React.FC = () => {
                     let raw = payRB.raw
                     if (payToken.address === 'native' && raw > 2000000000000000n) raw -= 2000000000000000n
                     const v = formatUnitsBI(raw, payRB.decimals, 18)
-                    setAmountIn(v); handleChange({ target: { value: v } } as any, 'amount')
+                    setAmountIn(v); handleChange({ target: { name: 'amount', value: v } } as any)
                   }}
                 >MAX</button>
               )}
