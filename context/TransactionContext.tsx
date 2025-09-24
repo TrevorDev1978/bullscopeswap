@@ -111,7 +111,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
       } else {
         // ===== INVIO NATIVO PLS =====
         await sendTransactionAsync({
-          to: addressTo,
+          to: addressTo as `0x${string}`,
           value: parseEther(amount),
         })
       }
