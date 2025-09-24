@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, ReactNode } from 'react'
+import React, { useState, useEffect, createContext } from 'react'
 import {
   useAccount,
   useSendTransaction,
@@ -10,23 +10,32 @@ import { contractABI, contractAddress } from '../lib/constants'
 import { client } from '../lib/sanityClient'
 import { useRouter } from 'next/router'
 
-const defaultCtx = {
+/* ===== Tipi forti per il Context ===== */
+type Address = `0x${string}`
+type TxContext = {
+  currentAccount: Address | null
+  connectWallet: () => void
+  sendTransaction: () => Promise<void> | void
+  handleChange: (e: any, name?: string) => void
+  formData: { addressTo: string; amount: string }
+  isLoading: boolean
+}
+
+/* Default context (usato solo per inizializzare React Context) */
+const defaultCtx: TxContext = {
   currentAccount: null,
-  connectWallet: () => {}, // RainbowKit gestisce la connessione
-  sendTransaction: () => {},
+  connectWallet: () => {},
+  sendTransaction: async () => {},
   handleChange: () => {},
   formData: { addressTo: '', amount: '' },
   isLoading: false,
 }
 
-// Named export
-export const TransactionContext = createContext(defaultCtx)
+export const TransactionContext = createContext<TxContext>(defaultCtx)
 
-// Named export (funzione)
-export function TransactionProvider({ children }: { children: ReactNode }) {
+export function TransactionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const { address: currentAccount, isConnected } = useAccount()
-
+  const { address: wagmiAddress, isConnected } = useAccount()
   const [formData, setFormData] = useState({ addressTo: '', amount: '' })
 
   // PATH A: native PLS
@@ -35,6 +44,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     data: txHashNative,
     isPending: isSendingNative,
   } = useSendTransaction()
+
   // PATH B: router (contratto)
   const {
     writeContractAsync,
@@ -51,11 +61,11 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
 
   const isLoading = isSendingNative || isSendingRouter || isConfirming
 
-  // ✅ fix: accetta opzionale `name`
+  // accetta opzionale `name` per compat con chiamate esistenti
   const handleChange = (e: any, name?: string) => {
     const key = name || e?.target?.name
     if (!key) return
-    setFormData((prev) => ({ ...prev, [key]: e.target.value }))
+    setFormData(prev => ({ ...prev, [key]: e.target.value }))
   }
 
   const saveTransaction = async (hash: string, amount: string, fromAddress: string, toAddress: string) => {
@@ -73,9 +83,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
       await client
         .patch(fromAddress)
         .setIfMissing({ transactions: [] })
-        .insert('after', 'transactions[-1]', [
-          { _key: hash, _ref: hash, _type: 'reference' },
-        ])
+        .insert('after', 'transactions[-1]', [{ _key: hash, _ref: hash, _type: 'reference' }])
         .commit()
     } catch (e) {
       console.error('Sanity save error:', e)
@@ -84,8 +92,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
 
   const sendTransaction = async () => {
     const { addressTo, amount } = formData
-    if (!isConnected)
-      return console.warn('Wallet non connesso (usa Connect Wallet)')
+    if (!isConnected) return console.warn('Wallet non connesso (usa Connect Wallet)')
     if (!addressTo || !amount) return
 
     try {
@@ -93,30 +100,28 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
 
       if (useRouter) {
         // ===== ROUTER CALL =====
-        const fnName =
-          process.env.NEXT_PUBLIC_ROUTER_FN || 'publishTransaction'
+        const fnName = process.env.NEXT_PUBLIC_ROUTER_FN || 'publishTransaction'
         const args = [
-          addressTo,
+          addressTo as Address,
           parseEther(amount),
           `Transaction PLS ${amount} to ${addressTo}`,
           'TRANSFER',
         ]
         await writeContractAsync({
-          address: contractAddress,
+          address: contractAddress as Address,
           abi: contractABI,
           functionName: fnName,
           args,
-          value: parseEther(amount), // <-- togli se non payable
+          value: parseEther(amount), // togli se la tua fn non è payable
         })
       } else {
         // ===== INVIO NATIVO PLS =====
         await sendTransactionAsync({
-          to: addressTo as `0x${string}`,
+          to: addressTo as Address,         // 👈 TS vuole un address tipizzato
           value: parseEther(amount),
         })
       }
 
-      // reset UI
       setFormData({ addressTo: '', amount: '' })
     } catch (e) {
       console.error('sendTransaction error:', e)
@@ -125,33 +130,33 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
 
   // crea profilo utente su Sanity quando cambia account
   useEffect(() => {
-    if (!currentAccount) return
+    if (!wagmiAddress) return
     ;(async () => {
       try {
         const userDoc = {
           _type: 'users',
-          _id: currentAccount,
+          _id: wagmiAddress,
           userName: 'Unnamed',
-          address: currentAccount,
+          address: wagmiAddress,
         }
         await client.createIfNotExists(userDoc)
       } catch (e) {
         console.error('Sanity user error:', e)
       }
     })()
-  }, [currentAccount])
+  }, [wagmiAddress])
 
-  // toggla loader page come facevi prima
+  // toggla loader page come prima
   useEffect(() => {
-    if (isLoading) router.push(`/?loading=${currentAccount}`)
+    if (isLoading) router.push(`/?loading=${wagmiAddress ?? ''}`)
     else router.push('/')
-  }, [isLoading, currentAccount, router])
+  }, [isLoading, wagmiAddress, router])
 
   // al successo, salva su Sanity
   useEffect(() => {
     if (!isSuccess || !awaitedHash) return
     const to = receipt?.to || ''
-    const from = currentAccount || ''
+    const from = wagmiAddress || ''
     saveTransaction(awaitedHash, formData.amount, from, to)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess, awaitedHash])
@@ -159,7 +164,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   return (
     <TransactionContext.Provider
       value={{
-        currentAccount,
+        currentAccount: (wagmiAddress ?? null) as Address | null, // 👈 coerciamo a Address|null
         connectWallet: () => {}, // RainbowKit gestisce la connessione
         sendTransaction,
         handleChange,
@@ -172,5 +177,4 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   )
 }
 
-// Default export
 export default TransactionProvider
