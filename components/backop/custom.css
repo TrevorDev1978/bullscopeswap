@@ -1,0 +1,633 @@
+/* ================================
+   BULLSCOPE — TEMA AZZURRO ELEGANTE
+   ================================ */
+
+/* ——— Palette regolabile ——— */
+:root{
+  --gold-dk-1: #0f1a2b;   /* blu notte */
+  --gold-dk-2: #142541;   /* blu scuro elegante */
+  --gold-dk-3: #1e335c;   /* blu medio */
+  --gold-line: #5a8bd7;   /* azzurro raffinato per linee */
+  --gold-glow: rgba(120,180,255,0.22);
+  --glass-bg: rgba(8,14,28,0.55);
+  --text-strong: #ffffff;
+  --text-soft: rgba(255,255,255,0.85);
+
+ 
+
+   --silver-1: #1a2f55;   /* blu medio chiaro */
+   --silver-2: #234170;   /* blu azzurrino */
+   --silver-3: #2e5490;   /* blu elegante chiaro */
+   --silver-line: rgba(120,170,240,0.55);
+   --silver-glow: rgba(160,200,255,0.35);
+   --silver-text: #f4f8ff;
+   --silver-sub: rgba(200,220,255,0.95);
+   --btn-silver-1: #4a78c8;
+   --btn-silver-2: #375b9a;
+   --btn-silver-border: rgba(120,170,240,0.85);
+
+}
+
+/* AZZURRO globale con shimmer */
+html, body, #root { height: 100%; }
+body{
+  margin: 0;
+  color: var(--text-strong);
+  background: linear-gradient(135deg, var(--gold-dk-1) 0%, var(--gold-dk-2) 50%, var(--gold-dk-3) 100%);
+  background-attachment: fixed;
+}
+body::before{
+  content:"";
+  position: fixed; inset: 0; z-index: -2;
+  background:
+    radial-gradient(120% 100% at 25% 0%, rgba(120,160,255,0.08) 0%, transparent 60%),
+    radial-gradient(120% 100% at 100% 90%, rgba(90,130,210,0.06) 0%, transparent 60%),
+    linear-gradient(135deg, var(--gold-dk-1) 0%, var(--gold-dk-2) 50%, var(--gold-dk-3) 100%);
+  background-blend-mode: overlay, overlay, normal;
+  animation: goldShift 40s ease-in-out infinite alternate;
+}
+body::after{
+  content:"";
+  position: fixed; inset: 0; z-index: -1;
+  background: conic-gradient(from 0deg at 50% 50%,
+    rgba(255,255,255,0.10) 0deg,
+    rgba(255,255,255,0.00) 60deg,
+    rgba(255,255,255,0.12) 120deg,
+    rgba(255,255,255,0.00) 180deg,
+    rgba(255,255,255,0.10) 240deg,
+    rgba(255,255,255,0.00) 300deg,
+    rgba(255,255,255,0.12) 360deg);
+  mix-blend-mode: soft-light;
+  animation: goldSpin 120s linear infinite;
+  pointer-events: none;
+}
+@keyframes goldShift{ 0%{filter:saturate(110%)} 100%{filter:saturate(140%)} }
+@keyframes goldSpin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+/* Navbar */
+nav.sc-bRKsAp.TQSzL{
+  background: transparent !important;
+  backdrop-filter: saturate(120%) blur(2px);
+  border-bottom: 1px solid rgba(90,130,210,0.25);
+}
+header{
+  background: transparent !important;
+  border-bottom: 1px solid rgba(90,130,210,0.20);
+}
+
+/* Contenitore pagina & blocco swap (base blu) */
+.sc-cBcxDI.ffrmeT{ background: transparent !important; }
+#swap-page{
+  background: var(--glass-bg) !important;
+  border: 1px solid rgba(90,130,210,0.28) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(90,130,210,0.18) inset;
+  border-radius: 20px !important;
+}
+#swap-page [class*="UlmxL"],
+#swap-page [class*="bd70ut"],
+#swap-page [class*="sc-"]{ background-color: transparent !important; }
+#swap-page input,
+#swap-page button.open-currency-select-button{
+  background: rgba(10,8,4,0.55) !important;
+  border: 1px solid rgba(90,130,210,0.28) !important;
+  color: var(--text-soft) !important;
+  border-radius: 14px !important;
+}
+#swap-page button[variant="primary"],
+#swap-page .sc-hLclGa.jmRqFu{
+  background: linear-gradient(180deg, #3b5ca8, #2a4378) !important;
+  color: #eaf1ff !important;
+  border: 1px solid #5a8bd7 !important;
+  box-shadow: 0 6px 18px rgba(90,130,210,0.25), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+#swap-page button[variant="primary"]:hover,
+#swap-page .sc-hLclGa.jmRqFu:hover{ filter: brightness(1.06); }
+nav a{ color: var(--text-soft) !important; }
+
+/* =======================
+   BRAND “Bullscope Swap”
+   ======================= */
+header a[aria-label*="PulseX" i],
+nav    a[aria-label*="PulseX" i],
+header a[href="/"],
+nav    a[href="/"]{
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  font-size:0 !important;
+  color:transparent !important;
+}
+header a[aria-label*="PulseX" i] > *,
+nav    a[aria-label*="PulseX" i] > *,
+header a[href="/"] > *,
+nav    a[href="/"] > *{
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+header a[aria-label*="PulseX" i]::before,
+nav    a[aria-label*="PulseX" i]::before,
+header a[href="/"]::before,
+nav    a[href="/"]::before{
+  content:"";
+  width: 100px; height: 100px;
+  background-image: url("/images/bullscope-logo.png") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+  display: inline-block;
+  filter:
+    drop-shadow(0 1px 0 rgba(0,0,0,0.55))
+    drop-shadow(0 6px 16px rgba(0,0,0,0.28))
+    drop-shadow(0 0 2px rgba(120,180,255,0.35)) !important;
+}
+header a[aria-label*="PulseX" i]::after,
+nav    a[aria-label*="PulseX" i]::after,
+header a[href="/"]::after,
+nav    a[href="/"]::after{
+  content: "Bullscope Swap" !important;
+  display: inline-block !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  font-family: "Great Vibes", cursive, Roboto, sans-serif !important;
+  font-size: 2.8rem !important;
+  font-weight: 400 !important;
+  color: #fff !important;
+  letter-spacing: 1px !important;
+  text-shadow:
+    0 0 2px rgba(0,0,0,0.50),
+    0 2px 6px rgba(0,0,0,0.35),
+    0 0 8px rgba(120,180,255,0.20) !important;
+  transform: translate(6px, 5px) !important;
+  line-height: 1 !important;
+  opacity: 0 !important;
+  transition: none !important;
+}
+body.brand-ready header a[aria-label*="PulseX" i]::after,
+body.brand-ready nav    a[aria-label*="PulseX" i]::after,
+body.brand-ready header a[href="/"]::after,
+body.brand-ready nav    a[href="/"]::after{
+  opacity: 1 !important;
+}
+
+/* Rimuovi “v1.1.3” */
+nav a[href^="https://app.pulsex.com"],
+header a[href^="https://app.pulsex.com"]{ display:none !important; }
+
+/* MENU: solo Trade & Farm */
+@media (min-width:1024px){
+  nav.sc-bRKsAp.TQSzL{
+    display:flex !important; align-items:center !important; justify-content:space-between !important;
+  }
+  nav.sc-bRKsAp.TQSzL > .sc-gKHVLF.sc-iBAaJG.UlmxL.iIFIZh{
+    display:flex !important; align-items:center !important; gap:24px !important; flex:1 1 auto !important;
+    justify-content: flex-start !important;
+  }
+  nav.sc-bRKsAp.TQSzL > .sc-gKHVLF.sc-iBAaJG.eMTPri.izyNuh{ flex:0 0 auto !important; }
+  nav.sc-bRKsAp.TQSzL > .sc-gKHVLF.sc-iBAaJG.UlmxL.iIFIZh > ._1xa5z0q0.bd70ut10.bd70ut3{
+    display:flex !important; align-items:center !important;
+    gap: 24px !important;
+    margin-left: 300px !important;
+    flex:0 0 auto !important;
+  }
+  nav.sc-bRKsAp.TQSzL ._1xa5z0q0.bd70ut10.bd70ut3 > .sc-gKHVLF.dFKuVj:has(> .sc-gKHVLF .sc-jtrUWv a[href="#/burn"]),
+  nav.sc-bRKsAp.TQSzL ._1xa5z0q0.bd70ut10.bd70ut3 > .sc-gKHVLF.dFKuVj:has(> .sc-gKHVLF .sc-jtrUWv a[href="#/info"]),
+  nav.sc-bRKsAp.TQSzL ._1xa5z0q0.bd70ut10.bd70ut3 > .sc-gKHVLF.dFKuVj:has(> .sc-gKHVLF .sc-jtrUWv a[href^="https://bridge.pulsechain.com/"]){
+    display:none !important;
+  }
+  nav.sc-bRKsAp.TQSzL ._1xa5z0q0.bd70ut10.bd70ut3 a[href="#/burn"],
+  nav.sc-bRKsAp.TQSzL ._1xa5z0q0.bd70ut10.bd70ut3 a[href="#/info"],
+  nav.sc-bRKsAp.TQSzL ._1xa5z0q0.bd70ut10.bd70ut3 a[href^="https://bridge.pulsechain.com/"]{
+    display:none !important;
+  }
+  nav.sc-bRKsAp.TQSzL ._1xa5z0q0.bd70ut10.bd70ut3 > .sc-gKHVLF.dFKuVj{ margin:0 !important; }
+  nav.sc-bRKsAp.TQSzL > .sc-gKHVLF.sc-iBAaJG.fOrztp.iIFIZh > div:has(> button[scale="xs"][variant="text"]){
+    display:none !important;
+  }
+  nav.sc-bRKsAp.TQSzL > .sc-gKHVLF.sc-iBAaJG.fOrztp.iIFIZh > div:last-child{
+    display:none !important;
+  }
+  nav.sc-bRKsAp.TQSzL > .sc-gKHVLF.sc-iBAaJG.fOrztp.iIFIZh .sc-dtgxmn{ display:none !important; }
+  nav.sc-bRKsAp.TQSzL > .sc-gKHVLF.sc-iBAaJG.fOrztp.iIFIZh .sc-grXZZQ{ display:none !important; }
+}
+
+/* PILL PREZZO BULLSEYE */
+#bullseye-price{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 12px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: rgba(8,14,28,0.45);
+  border: 1px solid rgba(90,130,210,0.40);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.25),
+    inset 0 0 0 1px rgba(120,180,255,0.12);
+  backdrop-filter: saturate(120%) blur(2px);
+}
+#bullseye-price .be-icon{
+  width:20px; height:20px; flex:0 0 20px;
+  background: url("/images/bullseye-icon.png") no-repeat center / contain;
+  filter:
+    drop-shadow(0 1px 0 rgba(0,0,0,0.5))
+    drop-shadow(0 0 3px rgba(120,180,255,0.25));
+}
+
+#bullseye-price .be-ticker{
+  font-weight:600; letter-spacing:0.3px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+#bullseye-price .be-price{
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+
+/* PANNELLO SWAP — ARGENTO SPAZZOLATO + SHIMMER */
+#swap-page{
+  position: relative !important;
+  overflow: hidden !important;
+  color: var(--silver-text) !important;
+  background:
+    radial-gradient(140% 100% at 0% 0%, rgba(200,220,255,0.15) 0%, transparent 55%),
+    radial-gradient(120% 120% at 100% 100%, rgba(180,210,255,0.12) 0%, transparent 60%),
+    linear-gradient(160deg, var(--silver-1) 0%, var(--silver-2) 45%, var(--silver-3) 100%) !important;
+  border: 1px solid var(--silver-line) !important;
+  box-shadow:
+    0 16px 44px rgba(0,0,0,0.55),
+    0 0 0 1px var(--silver-line) inset,
+    0 0 36px var(--silver-glow) inset !important;
+  border-radius: 22px !important;
+  padding: 16px !important;
+  backdrop-filter: saturate(120%) blur(4px);
+}
+
+#swap-page {
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(200,220,255,0.20) 0%, transparent 55%),
+    radial-gradient(100% 120% at 100% 100%, rgba(170,200,255,0.15) 0%, transparent 60%),
+    linear-gradient(160deg, #234170 0%, #2e5490 50%, #3b6ab5 100%) !important;
+}
+
+#swap-page button.open-currency-select-button{
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)) !important;
+  border: 1px solid rgba(210,220,235,0.35) !important;
+  border-radius: 14px !important;
+  color: var(--silver-text) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04) !important;
+}
+#swap-page button.open-currency-select-button:hover{
+  border-color: rgba(230,240,255,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(210,230,255,0.12) !important;
+}
+#swap-page input[type="text"],
+#swap-page input[inputmode="numeric"],
+#swap-page input[type="number"]{
+  background: rgba(18,22,28,0.55) !important;
+  border: 1px solid rgba(210,220,235,0.35) !important;
+  color: var(--silver-text) !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+  font-size: 18px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04) !important;
+}
+#swap-page input::placeholder{
+  color: rgba(230,238,250,0.38) !important;
+}
+#swap-page .sc-grXZZQ,
+#swap-page .label{
+  color: var(--silver-sub) !important;
+  letter-spacing: .3px !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55),
+               0 0 6px rgba(120,180,255,0.25);
+}
+
+#swap-page button[variant="light"]{
+  background: rgba(24,28,34,0.45) !important;
+  border: 1px solid rgba(210,220,235,0.35) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.06) !important;
+  color: var(--silver-text) !important;
+}
+#swap-page button[variant="primary"],
+#swap-page .sc-hLclGa.jmRqFu{
+  background: linear-gradient(180deg, var(--btn-silver-1), var(--btn-silver-2)) !important;
+  color: #1a1f26 !important;
+  border: 1px solid var(--btn-silver-border) !important;
+  box-shadow:
+    0 10px 24px rgba(80,100,130,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.55) !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+}
+#swap-page button[variant="primary"]:hover,
+#swap-page .sc-hLclGa.jmRqFu:hover{
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+#swap-page hr,
+#swap-page [role="separator"]{
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, rgba(220,230,245,0.45), transparent) !important;
+  margin: 10px 0 !important;
+}
+#swap-page svg{ fill: currentColor; opacity: 0.9; }
+#swap-page button[variant="text"]{ color: var(--silver-sub) !important; }
+#swap-page .sc-eBMZNu.egzAzw{ margin-top: 8px !important; }
+
+/* Pill posizionato in fixed finché non viene ancorato */
+.pill-float {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 9999 !important;
+}
+
+/* =======================
+   SLIPPAGE PANEL (SKIN)
+   ======================= */
+.bls-slippage-panel{
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(200,220,255,0.20) 0%, transparent 55%),
+    radial-gradient(100% 120% at 100% 100%, rgba(170,200,255,0.15) 0%, transparent 60%),
+    linear-gradient(160deg, #234170 0%, #2e5490 50%, #3b6ab5 100%) !important;
+  border: 1px solid rgba(160,200,255,0.55) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45),
+              inset 0 0 18px rgba(160,200,255,0.22) !important;
+  color: #f4f8ff !important;
+  padding: 16px !important;
+  backdrop-filter: blur(6px) saturate(120%) !important;
+  z-index: 9999 !important;
+}
+
+/* Testi/label nel pannello */
+.bls-slippage-panel .sc-grXZZQ,
+.bls-slippage-panel label,
+.bls-slippage-panel span{
+  color: rgba(220,235,255,0.95) !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45), 0 0 6px rgba(120,180,255,0.20);
+}
+
+/* Bottoni % */
+.bls-slippage-panel button,
+.bls-slippage-panel [role="button"]{
+  background: linear-gradient(180deg, #6aa6ff, #2f5ea3) !important;
+  color: #fff !important;
+  border: 1px solid rgba(200,230,255,0.6) !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
+  transition: transform .15s ease, filter .15s ease;
+}
+.bls-slippage-panel button:hover,
+.bls-slippage-panel [role="button"]:hover{
+  filter: brightness(1.07) !important;
+  transform: translateY(-1px);
+}
+
+/* Input slippage e deadline */
+.bls-slippage-panel input{
+  background: rgba(12,24,44,0.55) !important;
+  border: 1px solid rgba(170,210,255,0.5) !important;
+  color: #f4f8ff !important;
+  border-radius: 10px !important;
+  padding: 8px 10px !important;
+  font-weight: 600 !important;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.05) !important;
+}
+.bls-slippage-panel input::placeholder{
+  color: rgba(230,238,250,0.55) !important;
+}
+
+/* ============================
+   SLIPPAGE PANEL — CLEAN UP
+   ============================ */
+
+
+
+
+
+
+
+/* ✅ Piccolo cleanup spazi */
+.bls-slippage-panel .sc-gKHVLF.sc-iBAaJG { margin: 0 !important; }
+.bls-slippage-panel [role="separator"], 
+.bls-slippage-panel hr { display: none !important; }  /* opzionale se vedi linee residue */
+
+
+/* ——— EXPERT MODE (label, icona “?” e switch) ——— */
+
+/* 1) Nascondo lo switch a destra */
+.bls-slippage-panel #toggle-expert-mode-button,
+.bls-slippage-panel #toggle-expert-mode-button + .sc-gJgZMk,
+.bls-slippage-panel .sc-iWqaYm.iTFfea {
+  display: none !important;
+}
+
+/* 2) Nascondo la label “Expert Mode” e la sua icona “?” (wrapper dell’icona) */
+.bls-slippage-panel .hDjHqY.fTBGgZ .sc-grXZZQ.cdHhbk,
+.bls-slippage-panel .hDjHqY.fTBGgZ .sc-gshwjW.hReXhO {
+  display: none !important;
+}
+
+/* ——— TX DEADLINE (label, icona “?” e input 20) ——— */
+
+/* 3) Nascondo l’input minutes */
+.bls-slippage-panel input[placeholder="20"] {
+  display: none !important;
+}
+
+/* 4) Nascondo l’icona “?” con il path che mi hai dato (limitata al pannello) */
+.bls-slippage-panel svg > path[d^="M12 2C6.48 2 2 6.48"] {
+  display: none !important;
+}
+
+
+
+/* ——— Rifiniture ——— */
+
+/* Elimino eventuali separatori/linee residue nel pannello (se non ti servono) */
+.bls-slippage-panel [role="separator"],
+.bls-slippage-panel hr {
+  display: none !important;
+}
+
+
+/* Bottone “Customize Routing” (icona settings) */
+.bls-slippage-panel button.sc-hLclGa.bUZmol {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ——— RIMUOVI SOLO IL MAPPAMONDO (LINGUE) IN NAVBAR ——— */
+nav.sc-bRKsAp.TQSzL button:has(> svg > path[d^="M11.99 2C6.47 2 2 6.48"]),
+nav.sc-bRKsAp.TQSzL button:has(> svg > path[d^="M12 2C6.48 2 2 6.48"]) {
+  display: none !important;
+}
+
+/* Fallback se lo <svg> non è wrappato in <button> */
+nav.sc-bRKsAp.TQSzL svg:has(> path[d^="M11.99 2C6.47 2 2 6.48"]),
+nav.sc-bRKsAp.TQSzL svg:has(> path[d^="M12 2C6.48 2 2 6.48"]) {
+  display: none !important;
+}
+
+/* ——— SALVAGUARDIA: NON TOCCARE LO SLIPPAGE ——— */
+/* Lo slippage ha un path che inizia con "m12.004 0" (minuscolo) ed è nello swap, non nella navbar */
+#swap-page svg:has(> path[d^="m12.004 0"]) {
+  display: inline-block !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+
+
+/* —— Nascondi il pulsante "refresh" sulla destra dell'header —— */
+body.bls-swap button[data-dd-action-name="Swap refresh button"]{
+  display: none !important;
+}
+
+/* —— Stile essenziale per il nuovo bottone rotella —— */
+#bls-slippage-btn{
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 0 !important;
+  cursor: pointer !important;
+}
+#bls-slippage-btn svg{
+  width: 24px; height: 24px;
+  color: var(--colors-textSubtle, #dfe7ff);
+  fill: currentColor;
+}
+
+/* ——— NASCONDI la rotella slippage nella NAVBAR ——— */
+nav.sc-bRKsAp.TQSzL button:has(> svg > path[d^="m12.004 0"]),
+nav.sc-bRKsAp.TQSzL button:has(> svg > path[d^="M12.004 0"]) {
+  display: none !important;
+}
+
+/* assicurati che il bottone custom resti visibile nello swap */
+#swap-page #bls-slippage-btn { display: inline-flex !important; align-items: center; justify-content: center; }
+
+
+/* Nascondo il testo nativo Swap */
+.sc-grXZZQ.CdzCT {
+  font-size: 0 !important;
+  color: transparent !important;
+  position: relative !important;
+}
+
+/* Scritta elegante nascosta di default */
+.sc-grXZZQ.CdzCT::after {
+  content: "Bullscope Swap" !important;
+  display: inline-block !important;
+  font-family: "Great Vibes", cursive, Roboto, sans-serif !important;
+  font-size: 1.4rem !important;   /* puoi regolare */
+  font-weight: 400 !important;     /* ← leggermente più fine */
+  color: #fff !important;
+  letter-spacing: 1px !important;
+  text-shadow:
+    0 0 2px rgba(0,0,0,0.50),
+    0 2px 6px rgba(0,0,0,0.35),
+    0 0 8px rgba(120,180,255,0.20) !important;
+  transform: translate(6px, 5px) !important;
+  line-height: 1 !important;
+  pointer-events: none !important;
+  opacity: 0 !important;             /* nascosta al load */
+  transition: opacity .3s ease;
+}
+
+/* Quando il body è pronto, la mostro */
+body.brand-ready .sc-grXZZQ.CdzCT::after {
+  opacity: 1 !important;
+}
+
+/* ===== NAVBAR CLEANUP ===== */
+
+/* Nascondi il cluster tab "Swap / Liquidity / Analytics / Charts" */
+nav .flex.bg-\[\#20242A\].rounded-3xl.px-2.py-1 {
+  display: none !important;
+}
+
+/* Nascondi il selettore rete (quello con img alt="eth" / eth.png) */
+nav .flex.items-center.bg-\[\#20242A\].rounded-2xl:has(img[alt="eth"]) {
+  display: none !important;
+}
+
+/* Ingrandisci il logo Bullscope a sinistra del 35% senza rompere il layout */
+nav img[src*="/images/bullscope-logo.png"] {
+  transform: scale(1.35);
+  transform-origin: left center;
+}
+
+/* Centra il PILL quando è nel layout dell’header:
+   (assumi che il container centrale sia un flex con "justify-center") */
+.bls-pill-center {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== SWAP ROW: icone pulite (niente “quadratini”) ===== */
+#swap-page .token-select.token-select--clean {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+#swap-page .token-select .token-icon {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: inline-block;
+  background: transparent !important; /* niente fondo */
+}
+#swap-page .token-select .token-ticker {
+  font-size: 0.95rem; font-weight: 700;
+  margin-left: 6px;
+}
+#swap-page .token-select .token-chevron { opacity: .85; }
+
+/* Barre un filo più larghe già ok; numero leggermente più basso */
+#swap-page .amount--lower { transform: translateY(2px); }
+
+/* Titolo in 3D leggero */
+.bls-brand-3d {
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.45),
+    0 8px 22px rgba(0,0,0,.25),
+    0 0 10px rgba(120,180,255,.25);
+}
+
+/* ======= ADJUSTS RICHIESTI ======= */
+
+/* 1) Pannello swap leggermente più grande (~5%) */
+#swap-page {
+  transform: scale(1.05);
+  transform-origin: top center;
+}
+
+/* 2) Titolo "Bullscope Swap" nel pannello un filo più fine e semplice */
+#swap-page .bls-brand-title--panel {
+  font-weight: 400 !important;       /* meno bold */
+  letter-spacing: .3px !important;
+  filter: none !important;
+}
