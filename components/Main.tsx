@@ -396,6 +396,8 @@ const Main: React.FC = () => {
   const [bestPath, setBestPath]   = useState<string[] | null>(null)
 
   const [lastEdited, setLastEdited] = useState<'in' | 'out'>('in')
+  const [editing, setEditing] = useState(false)
+
 
   // PREZZI USD
   const payPriceUsd = useUsdPrice(payToken)
@@ -528,7 +530,6 @@ const Main: React.FC = () => {
   // ====== FORWARD QUOTE (You pay -> You receive) ======
   useEffect(() => {
     if (lastEdited !== 'in') return
-    if (!window.ethereum) return
     if (!amountIn || Number(toNum(amountIn)) <= 0) { setAmountOut(''); setBestPath(null); return }
     if (!payToken || !rcvToken) { setAmountOut(''); setBestPath(null); return }
     if (!candidatePaths.length) { setAmountOut(''); setBestPath(null); return }
@@ -564,7 +565,6 @@ const Main: React.FC = () => {
   // ====== REVERSE QUOTE (You receive -> You pay) — veloce via getAmountsIn ======
   useEffect(() => {
     if (lastEdited !== 'out') return
-    if (!window.ethereum) return
     const wantOut = Number(toNum(amountOut))
     if (!amountOut || wantOut <= 0) { setAmountIn(''); setBestPath(null); return }
     if (!candidatePaths.length) { return } // stesso token o nessun path
@@ -1120,6 +1120,23 @@ const openPreview = async () => {
     }
   }
 
+/* ↓↓ Pause animazioni quando si digita o se l’utente preferisce meno motion ↓↓ */
+@media (prefers-reduced-motion: reduce) {
+  #swap-anim-shell,
+  .bls-sparkles,
+  .bls-brand-3d {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.bls-reduce-motion #swap-anim-shell,
+.bls-reduce-motion .bls-sparkles,
+.bls-reduce-motion .bls-brand-3d {
+  animation: none !important;
+  transition: none !important;
+}
+
+
   .bls-preview-enter {
     animation: blsSpinGrowIn 0.8s linear forwards;
   }
@@ -1139,7 +1156,7 @@ const openPreview = async () => {
       )}
 
 
-      <div className={style.wrapper}>
+      <div className={style.wrapper + (editing ? ' bls-reduce-motion' : '')}>
         {/* SHELL con animazione flip-away */}
         {/* SHELL con animazione flip-away */}
 {!previewOpen && (
@@ -1209,19 +1226,22 @@ const openPreview = async () => {
 
               <div className="amount-input flex-1 text-right" style={{ position:'relative' }}>
                 <input
-                  inputMode="decimal"
-                  autoComplete="off"
-                  type="text"
-                  className={style.transferPropInput + ' text-right amount--lower'}
-                  placeholder="0.0"
-                  pattern="^[0-9]*[.,]?[0-9]*$"
-                  value={amountIn}
-                  onChange={(e) => {
-                    setAmountIn(e.target.value)
-                    setLastEdited('in')
-                    ctxHandleChange(e, 'amount')
-                  }}
-                />
+  inputMode="decimal"
+  autoComplete="off"
+  type="text"
+  className={style.transferPropInput + ' text-right amount--lower'}
+  placeholder="0.0"
+  pattern="^[0-9]*[.,]?[0-9]*$"
+  value={amountIn}
+  onFocus={() => setEditing(true)}
+  onBlur={() => setEditing(false)}
+  onChange={(e) => {
+    setAmountIn(e.target.value)
+    setLastEdited('in')
+    ctxHandleChange(e, 'amount')
+  }}
+/>
+
                 <div style={{ marginTop: 4, fontSize: 11, color: 'rgba(230,238,250,0.90)', textAlign: 'right' }}>
                   {usdUnderPay}
                 </div>
@@ -1273,18 +1293,21 @@ const openPreview = async () => {
 
               <div className="amount-input flex-1 text-right" style={{ position: 'relative' }}>
                 <input
-                  inputMode="decimal"
-                  autoComplete="off"
-                  type="text"
-                  className={style.transferPropInput + ' text-right amount--lower'}
-                  placeholder="0.0"
-                  value={amountOut}
-                  onChange={(e) => {
-                    setAmountOut(e.target.value)
-                    setLastEdited('out')
-                  }}
-                  readOnly={false}
-                />
+  inputMode="decimal"
+  autoComplete="off"
+  type="text"
+  className={style.transferPropInput + ' text-right amount--lower'}
+  placeholder="0.0"
+  value={amountOut}
+  onFocus={() => setEditing(true)}
+  onBlur={() => setEditing(false)}
+  onChange={(e) => {
+    setAmountOut(e.target.value)
+    setLastEdited('out')
+  }}
+  readOnly={false}
+/>
+
                 <div style={{ marginTop: 4, fontSize: 11, color: 'rgba(230,238,250,0.90)', textAlign: 'right' }}>
                   {usdUnderRcv}
                 </div>
