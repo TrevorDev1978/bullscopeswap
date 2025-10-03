@@ -179,6 +179,30 @@ async function getBalanceSafe(account: string) {
 }
 
 
+// --- Dexscreener icon hydration (solo se manca l'icona) ---
+const dexsIconCache: Record<string, string> = {}
+
+
+async function hydrateTokenIcon(t: Token, setter: (v: Token) => void) {
+  if (!t || t.icon || t.address === 'native') return
+  const addr = (t.address || '').toLowerCase()
+  if (!addr) return
+  if (dexsIconCache[addr]) { setter({ ...t, icon: dexsIconCache[addr] }); return }
+
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addr}`)
+    const json: any = await res.json()
+    const pairs: any[] = Array.isArray(json?.pairs) ? json.pairs : []
+    const best = pairs.find(p => String(p?.chainId || '').toLowerCase().includes('pulse')) || pairs[0]
+    const icon = best?.info?.imageUrl || best?.info?.image
+    if (typeof icon === 'string' && icon.startsWith('http')) {
+      dexsIconCache[addr] = icon
+      setter({ ...t, icon })
+    }
+  } catch { /* noop */ }
+}
+
+
 
 async function ensurePulseChain(): Promise<boolean> {
   if (!window.ethereum) return false
@@ -390,10 +414,12 @@ const Main: React.FC = () => {
 
   // tokens & amounts
   const [payToken, setPayToken]   = useState<Token>(DEFAULT_TOKENS.find(t => t.symbol === 'PLS')!)
-  const [rcvToken, setRcvToken]   = useState<Token>(DEFAULT_TOKENS.find(t => t.symbol === 'PLSX')!)
+  const [rcvToken, setRcvToken]   = useState<Token>(DEFAULT_TOKENS.find(t => t.symbol === 'BLSEYE')!)
   const [amountIn, setAmountIn]   = useState(formData.amount || '')
   const [amountOut, setAmountOut] = useState('')
   const [bestPath, setBestPath]   = useState<string[] | null>(null)
+  useEffect(() => { hydrateTokenIcon(payToken, setPayToken) }, [payToken])
+  useEffect(() => { hydrateTokenIcon(rcvToken, setRcvToken) }, [rcvToken])
 
   const [lastEdited, setLastEdited] = useState<'in' | 'out'>('in')
   const [editing, setEditing] = useState(false)
@@ -1156,7 +1182,7 @@ const openPreview = async () => {
       )}
 
 
-      <div className={style.wrapper + (editing ? ' bls-reduce-motion' : '')}>
+      <div className={style.wrapper + ((editing || selOpen) ? ' bls-reduce-motion' : '')}>
         {/* SHELL con animazione flip-away */}
         {/* SHELL con animazione flip-away */}
 {!previewOpen && (
@@ -1220,11 +1246,11 @@ const openPreview = async () => {
                 <button className="token-select token-select--clean" onClick={() => openSelector('pay')}>
                   <img className="token-icon" src={iconSrc(payToken)} alt={payToken.symbol} onError={iconFallback}/>
                   <span className="token-ticker">{payToken.symbol}</span>
-                  <AiOutlineDown className="token-chevron" />
+                  <AiOutlineDown className="token-chevron" style={{ opacity: .9, fontSize: 14, marginLeft: 6 }} />
                 </button>
               </div>
 
-              <div className="amount-input flex-1 text-right" style={{ position:'relative' }}>
+              <div className="amount-input flex-1 text-right" style={{ position:'relative', cursor:'text' }}>
                 <input
   inputMode="decimal"
   autoComplete="off"
@@ -1266,7 +1292,7 @@ const openPreview = async () => {
                 onClick={flip}
                 aria-label="Switch tokens"
               >
-                ↓
+                ⇅
               </button>
             </div>
 
@@ -1287,11 +1313,11 @@ const openPreview = async () => {
                 <button className="token-select token-select--clean" onClick={() => openSelector('receive')}>
                   <img className="token-icon" src={iconSrc(rcvToken)} alt={rcvToken.symbol} onError={iconFallback}/>
                   <span className="token-ticker">{rcvToken.symbol}</span>
-                  <AiOutlineDown className="token-chevron" />
+                  <AiOutlineDown className="token-chevron" style={{ opacity: .9, fontSize: 14, marginLeft: 6 }} />
                 </button>
               </div>
 
-              <div className="amount-input flex-1 text-right" style={{ position: 'relative' }}>
+              <div className="amount-input flex-1 text-right" style={{ position:'relative', cursor:'text' }}>
                 <input
   inputMode="decimal"
   autoComplete="off"
