@@ -557,15 +557,17 @@ const TokenSelector: React.FC<Props> = ({ open, side, onClose, onSelect, tokens 
               {fetching ? 'Reading token from chain…' : (error ? error : 'External token not in list')}
             </div>
             <button
-              disabled={fetching || !fetched || (excludeAddress && fetched?.address.toLowerCase() === excludeAddress.toLowerCase())}
-              onClick={addFetched}
-              style={{
-                display:'flex', alignItems:'center', gap:10, width:'100%',
-                background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.18)',
-                borderRadius:12, padding:10, cursor: fetching || !fetched ? 'default' : 'pointer',
-                opacity: (excludeAddress && fetched?.address.toLowerCase() === excludeAddress.toLowerCase()) ? .5 : 1
-              }}
-            >
+  disabled={Boolean(fetching || !fetched || (excludeAddress && fetched?.address.toLowerCase() === excludeAddress.toLowerCase()))}
+  onClick={addFetched}
+  style={{
+    display:'flex', alignItems:'center', gap:10, width:'100%',
+    background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.18)',
+    borderRadius:12, padding:10, cursor: fetching || !fetched ? 'default' : 'pointer',
+    opacity: (excludeAddress && fetched?.address.toLowerCase() === excludeAddress.toLowerCase()) ? .5 : 1
+  }}
+>
+
+
               <span className="token-avatar">
                 {fetched && (
                   <img
