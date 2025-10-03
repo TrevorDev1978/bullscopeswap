@@ -2,10 +2,25 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: [
-      "tokens.app.pulsex.com",
-      "tokens.app.v4.testnet.pulsex.com",
-      "raw.githubusercontent.com",
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "tokens.app.pulsex.com",
+      },
+      {
+        protocol: "https",
+        hostname: "tokens.app.v4.testnet.pulsex.com",
+      },
+      {
+        protocol: "https",
+        hostname: "raw.githubusercontent.com",
+      },
+    ],
+  },
+  experimental: {
+    allowedDevOrigins: [
+      "https://*.loca.lt",
+      "https://*.ngrok-free.app"
     ],
   },
 };
