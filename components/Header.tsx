@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { useAccount } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
-import BullseyePill from './BullseyePill'; // 👈 importa il componente esterno
+import BullseyePill from './BullseyePill'; // 👈 importa il esterno
 
 const style = {
   wrapper: `bls-header px-6 py-4 w-full flex justify-between items-center bg-[#191B1F]/70 shadow-md`,
