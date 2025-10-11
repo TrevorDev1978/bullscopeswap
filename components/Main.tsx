@@ -318,7 +318,7 @@ const tokenIconCss: React.CSSProperties = { width:18, height:18, borderRadius:99
    PREZZI USD (cache + pause hidden tab)
    ========================= */
 const _dsPriceCache: Record<string, { v: number; ts: number }> = {}
-const _dsInFlight: Record<string, Promise<number>> = {}
+const _dsInFlight: Record<string, Promise<number> | undefined> = {}
 const DS_TTL = 60_000
 async function fetchUsdPriceOnce(addrLC: string): Promise<number> {
   const now = Date.now()
