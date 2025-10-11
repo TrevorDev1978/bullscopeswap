@@ -872,8 +872,8 @@ const openPreview = async () => {
       await tx.wait()
       markConfirmed(tx?.hash)
 
-      refreshBalance(payToken, setPayRB)
-      refreshBalance(rcvToken, setRcvRB)
+      refreshBalance(payToken, setPayRB, account)
+      refreshBalance(rcvToken, setRcvRB, account)
     } catch (e: any) {
       if (process.env.NODE_ENV !== 'production') console.error('[BLS swap error]', e)
       markError(friendlyError(e))
