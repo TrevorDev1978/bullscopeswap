@@ -1,0 +1,38 @@
+[33m7b75bd1[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m baruffa
+[33mabcb685[m bah
+[33m1241a09[m refactor: remove web3modal and use wagmi only (PulseX style)
+[33mf983767[m mancavano le virgolette
+[33mf0a87b3[m NUOVA MODIFICA SPERIAMO CHE VA
+[33mc3312f5[m vediamo se funge
+[33m43015d7[m fix: replace defineChain with explicit PulseChain object
+[33m0e314f9[m feat(connect): PulseX-like black connect panel + wagmi injected+WC only
+[33m4c6c1ab[m fix: open PulseX-style modal if not connected and refresh balances aftawf
+[33m0f7a2ed[m fix:9a8fu9aaidaid
+[33m834f049[m fix:9a8fu9afa
+[33m354a41b[m aosidjja
+[33m8c1966e[m asodfijaoj
+[33m701a9a8[m virgolet
+[33m758ccad[m almost there wagmi
+[33m6b7eba2[m fix: remove rainbowkit, use wagmi connect instead
+[33mb3fede5[m diobon
+[33m4a0b446[m fixolo
+[33m01454e0[m refactor: replaced wallet connection with PulseX-style Web3Modal + removed RainbowKit
+[33m9d6b0ad[m lets go faster
+[33mec90834[m fix: sistemati flicker, default PLS→BLSEYE, icone e frecce
+[33mc9ed5c6[m perf: pause animations while typing + stable inputs; quotes work without wallet
+[33m9420514[m fix: force boolean on disabled prop in TokenSelector
+[33m25b9f10[m fix vercel.json schema (remove rootDirectory)
+[33m80a23e2[m add vercel.json to force build in /client
+[33m19176bd[m Fix: removed react-native deps and reinstalled clean
+[33me6696b6[m Update project : big changes
+[33m84a73b7[m perdios
+[33m5d074c0[m aiusd
+[33m8a16b3b[m Fix TransactionProvider typing and Main integration
+[33m1e7a623[m Remove backop folder (old backup)
+[33m262e5f6[m Remove backop folder (old backup)
+[33m773af88[m Fix Main.tsx + rename TransactionContext.js to .tsx
+[33ma864026[m diFIX
+[33md6edee7[m Fix handleChange call in Main.tsx (add name property)
+[33m2b1b9d6[m Fix handleChange signature for TypeScript compatibility
+[33mcb93c3b[m fix: upgrade target to ES2020 for BigInt support
+[33mce8953b[m first commit
