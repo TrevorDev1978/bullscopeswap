@@ -501,7 +501,8 @@ const Main: React.FC = () => {
   const [rcvRB, setRcvRB] = useState<RB | null>(null)
 
   
-  async function refreshBalance(token: Token, setter: (v: RB | null), acc: string | null) {
+  async function refreshBalance(token: Token, setter: (v: RB | null) => void, acc: string | null) {
+
     try {
       if (!window.ethereum || !acc) { setter(null); return }
 
