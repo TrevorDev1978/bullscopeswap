@@ -2,13 +2,13 @@ import TransactionProvider from '../context/TransactionContext'
 import '../styles/globals.css'
 import '../styles/custom.css'
 import type { AppProps } from 'next/app'
-// import { TransactionProvider } from '../context/TransactionContext' //
 
 import '@rainbow-me/rainbowkit/styles.css'
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http } from 'viem'
+import MobileAutoConnector from '../components/MobileAutoConnector' // ✅ Nuovo connettore mobile
 
 // 👉 PulseChain
 const pulsechain = {
@@ -28,7 +28,7 @@ const pulsechain = {
 // ⚠️ Imposta un vero WalletConnect Project ID da https://cloud.walletconnect.com
 const WALLETCONNECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_ID || 'demo'
 
-// Config wagmi + RainbowKit (v2)
+// ⚙️ Configurazione Wagmi + RainbowKit
 const config = getDefaultConfig({
   appName: 'Bullscope Swap',
   projectId: WALLETCONNECT_ID,
@@ -46,7 +46,10 @@ function MyApp({ Component, pageProps }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
         <RainbowKitProvider>
-          {/* ⬇️ Tieni il tuo context */}
+          {/* 🔹 Auto-connect mobile parallelo */}
+          <MobileAutoConnector />
+
+          {/* 🔹 Context originale del progetto */}
           <TransactionProvider>
             <Component {...pageProps} />
           </TransactionProvider>
