@@ -4,11 +4,12 @@ import '../styles/custom.css'
 import type { AppProps } from 'next/app'
 
 import '@rainbow-me/rainbowkit/styles.css'
-import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit'
-import { WagmiProvider } from 'wagmi'
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import { WagmiProvider, createConfig } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http } from 'viem'
-import MobileAutoConnector from '../components/MobileAutoConnector' // ✅ Nuovo connettore mobile
+import { injected, walletConnect } from 'wagmi/connectors'
+import MobileAutoConnector from '../components/MobileAutoConnector' // ✅ Auto-connect mobile
 
 // 👉 PulseChain
 const pulsechain = {
@@ -25,17 +26,38 @@ const pulsechain = {
   },
 }
 
-// ⚠️ Imposta un vero WalletConnect Project ID da https://cloud.walletconnect.com
-const WALLETCONNECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_ID || 'demo'
+// ✅ ENV obbligatori per WalletConnect mobile
+const WALLETCONNECT_ID =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_ID || '' // deve essere VALIDO (niente 'demo')
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://bullscopeswap.vercel.app' // https pubblico
+const APP_ICON = `${APP_URL}/favicon.ico` // icona assoluta https
 
-// ⚙️ Configurazione Wagmi + RainbowKit
-const config = getDefaultConfig({
-  appName: 'Bullscope Swap',
-  projectId: WALLETCONNECT_ID,
+// ⚙️ Config Wagmi con connettori espliciti + metadata (fondamentale per mobile)
+const config = createConfig({
   chains: [pulsechain],
   transports: {
     [pulsechain.id]: http('https://rpc.pulsechain.com'),
   },
+  connectors: [
+    // 1) Injected: funziona subito nel browser in-app di MetaMask/OKX/Trust
+    injected({
+      shimDisconnect: true,
+    }),
+    // 2) WalletConnect v2: per Safari/Chrome mobile + deep link a MetaMask
+    walletConnect({
+      projectId: WALLETCONNECT_ID,        // 🔴 deve essere reale
+      showQrModal: false,                 // su mobile apriamo l’app direttamente
+      metadata: {
+        name: 'Bullscope Swap',
+        description: 'DEX on PulseChain',
+        url: APP_URL,                     // 🔴 https pubblico (non localhost)
+        icons: [APP_ICON],                // 🔴 icona https
+      },
+      // opzionale: si può forzare eip155:369 come chain principale
+      // requiredChains: [pulsechain.id],
+    }),
+  ],
   ssr: true,
 })
 
@@ -46,7 +68,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
         <RainbowKitProvider>
-          {/* 🔹 Auto-connect mobile parallelo */}
+          {/* 🔹 Auto-connect mobile “parallelo” (non tocca la tua UI) */}
           <MobileAutoConnector />
 
           {/* 🔹 Context originale del progetto */}
