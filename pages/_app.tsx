@@ -5,9 +5,14 @@ import type { AppProps } from 'next/app'
 
 import '@rainbow-me/rainbowkit/styles.css'
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
-import { WagmiProvider, createConfig } from 'wagmi'
+import {
+  WagmiProvider,
+  createConfig,
+  cookieStorage,
+  createStorage,
+  http,
+} from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http } from 'viem'
 import { injected, walletConnect } from 'wagmi/connectors'
 import MobileAutoConnector from '../components/MobileAutoConnector' // ✅ Auto-connect mobile
 
@@ -30,23 +35,19 @@ const pulsechain = {
 const WALLETCONNECT_ID =
   process.env.NEXT_PUBLIC_WALLETCONNECT_ID || '' // deve essere VALIDO (niente 'demo')
 const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://bullscopeswap.vercel.app' // https pubblico
-const APP_ICON = `${APP_URL}/favicon.ico` // icona assoluta https
+  process.env.NEXT_PUBLIC_APP_URL || 'https://bullscopeswap.vercel.app' // URL pubblico
+const APP_ICON = `${APP_URL}/favicon.ico` // icona https assoluta
 
-// ⚙️ Config Wagmi con connettori espliciti + metadata (fondamentale per mobile)
 const hasWC = Boolean(WALLETCONNECT_ID)
 
+// ⚙️ Config Wagmi v2 con persistenza integrata
 const config = createConfig({
   chains: [pulsechain],
   transports: {
     [pulsechain.id]: http('https://rpc.pulsechain.com'),
   },
   connectors: [
-    // 1) Injected: funziona subito nel browser in-app di MetaMask/OKX/Trust
-    injected({
-      shimDisconnect: true,
-    }),
-    // 2) WalletConnect v2: istanziato solo se il projectId è reale
+    injected({ shimDisconnect: true }),
     ...(hasWC
       ? [
           walletConnect({
@@ -62,8 +63,10 @@ const config = createConfig({
         ]
       : []),
   ],
+  storage: createStorage({
+    storage: cookieStorage, // ✅ mantiene connessione persistente
+  }),
   ssr: true,
-   // ✅ aggiunta qui per persistenza connessione
 })
 
 const queryClient = new QueryClient()
@@ -71,7 +74,8 @@ const queryClient = new QueryClient()
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={config} reconnectOnMount={true} autoConnect={true}>
+      {/* ✅ v2: niente autoConnect nel provider, già gestito via storage */}
+      <WagmiProvider config={config}>
         <RainbowKitProvider>
           {/* 🔹 Auto-connect mobile “parallelo” (non tocca la tua UI) */}
           <MobileAutoConnector />
