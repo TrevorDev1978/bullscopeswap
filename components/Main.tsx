@@ -1224,7 +1224,7 @@ const openPreview = async () => {
           style={shellStyle}
         >
       )
-    })()}
+    })()
 
     <div
       id="swap-page"
