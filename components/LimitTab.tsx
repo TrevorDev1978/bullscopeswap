@@ -174,7 +174,7 @@ const LimitTab: React.FC = () => {
     const _minOut = parseUnitsBI(minOut || '0', buy.address === 'native' ? 18 : aOutDec)
     if (_amountIn <= 0n || _minOut <= 0n) return
 
-    const provider = new ethers.BrowserProvider((window as any).ethereum)
+    const provider = new ethers.providers.Web3Provider((window as any).ethereum)
     const signer = await provider.getSigner()
     const limit = new ethers.Contract(LIMIT_ADDRESS, ABI_LIMIT, signer)
 
