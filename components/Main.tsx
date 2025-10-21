@@ -796,7 +796,7 @@ const openPreview = async () => {
   } catch {
     // niente
   }
-+};
+};
 
 
   // ====== SWAP REALE ======
