@@ -63,7 +63,7 @@ const config = createConfig({
       : []),
   ],
   ssr: true,
-  autoConnect: true, // ✅ aggiunta qui per persistenza connessione
+   // ✅ aggiunta qui per persistenza connessione
 })
 
 const queryClient = new QueryClient()
@@ -71,7 +71,7 @@ const queryClient = new QueryClient()
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={config}>
+      <WagmiProvider config={config} reconnectOnMount={true} autoConnect={true}>
         <RainbowKitProvider>
           {/* 🔹 Auto-connect mobile “parallelo” (non tocca la tua UI) */}
           <MobileAutoConnector />
