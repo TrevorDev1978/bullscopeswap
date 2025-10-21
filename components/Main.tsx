@@ -1384,6 +1384,7 @@ const openPreview = async () => {
             </div>
           </div>
         </div>
+       </>
 )}
 
         {/* Loader TX legacy */}
