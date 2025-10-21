@@ -796,7 +796,7 @@ const openPreview = async () => {
   } catch {
     // niente
   }
-}
+
 
 
   // ====== SWAP REALE ======
@@ -1224,7 +1224,7 @@ const openPreview = async () => {
           style={shellStyle}
         >
       )
-    })()
+    })()}
 
     <div
       id="swap-page"
