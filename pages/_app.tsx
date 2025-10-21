@@ -19,7 +19,7 @@ const pulsechain = {
   nativeCurrency: { name: 'Pulse', symbol: 'PLS', decimals: 18 },
   rpcUrls: {
     default: { http: ['https://rpc.pulsechain.com'] },
-    public:  { http: ['https://rpc.pulsechain.com'] },
+    public: { http: ['https://rpc.pulsechain.com'] },
   },
   blockExplorers: {
     default: { name: 'PulseScan', url: 'https://scan.pulsechain.com' },
@@ -34,6 +34,8 @@ const APP_URL =
 const APP_ICON = `${APP_URL}/favicon.ico` // icona assoluta https
 
 // ⚙️ Config Wagmi con connettori espliciti + metadata (fondamentale per mobile)
+const hasWC = Boolean(WALLETCONNECT_ID)
+
 const config = createConfig({
   chains: [pulsechain],
   transports: {
@@ -44,21 +46,24 @@ const config = createConfig({
     injected({
       shimDisconnect: true,
     }),
-    // 2) WalletConnect v2: per Safari/Chrome mobile + deep link a MetaMask
-    walletConnect({
-      projectId: WALLETCONNECT_ID,        // 🔴 deve essere reale
-      showQrModal: false,                 // su mobile apriamo l’app direttamente
-      metadata: {
-        name: 'Bullscope Swap',
-        description: 'DEX on PulseChain',
-        url: APP_URL,                     // 🔴 https pubblico (non localhost)
-        icons: [APP_ICON],                // 🔴 icona https
-      },
-      // opzionale: si può forzare eip155:369 come chain principale
-      // requiredChains: [pulsechain.id],
-    }),
+    // 2) WalletConnect v2: istanziato solo se il projectId è reale
+    ...(hasWC
+      ? [
+          walletConnect({
+            projectId: WALLETCONNECT_ID,
+            showQrModal: false,
+            metadata: {
+              name: 'Bullscope Swap',
+              description: 'DEX on PulseChain',
+              url: APP_URL,
+              icons: [APP_ICON],
+            },
+          }),
+        ]
+      : []),
   ],
   ssr: true,
+  autoConnect: true, // ✅ aggiunta qui per persistenza connessione
 })
 
 const queryClient = new QueryClient()

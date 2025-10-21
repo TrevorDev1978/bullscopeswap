@@ -726,6 +726,7 @@ const openPreview = async () => {
     if (!amountIn || Number(toNum(amountIn)) <= 0) return
     if (!candidatePaths.length) return
     if (insufficientBalance) return
+    ctxHandleChange({ target: { value: amountIn } } as any, 'amount')
 
     // --- Avvia subito l'animazione e prepara i timer
     if (warpTimer.current) clearTimeout(warpTimer.current)
@@ -1207,11 +1208,24 @@ const openPreview = async () => {
         {/* SHELL con animazione flip-away */}
         {/* SHELL con animazione flip-away */}
 {!previewOpen && (
-  <div
-    id="swap-anim-shell"
-    className={warp ? 'bls-warp' : ''}
-    style={{ transformStyle: 'preserve-3d', perspective: '1200px', willChange: 'transform, opacity', transition: 'transform .2s ease' }}
-  >
+  <>
+    {(() => {
+      const shellStyle: React.CSSProperties = {
+        transformStyle: 'preserve-3d',
+        perspective: '1200px',
+        transition: 'transform .2s ease',
+        ...(warp ? { willChange: 'transform, opacity' } : {}), // ✅ solo durante warp
+      }
+
+      return (
+        <div
+          id="swap-anim-shell"
+          className={warp ? 'bls-warp' : ''}
+          style={shellStyle}
+        >
+      )
+    })()}
+
     <div
       id="swap-page"
       className="rounded-2xl p-6 shadow-lg"
@@ -1285,7 +1299,6 @@ const openPreview = async () => {
   onChange={(e) => {
     setAmountIn(e.target.value)
     setLastEdited('in')
-    ctxHandleChange(e, 'amount')
   }}
 />
 
