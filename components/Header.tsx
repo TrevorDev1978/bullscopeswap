@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { useAccount } from 'wagmi'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
-import BullseyePill from './BullseyePill' // 👈 esterno
+import BullseyePill from './BullseyePill'
 
 const style = {
   wrapper: `bls-header px-6 py-4 w-full flex justify-between items-center bg-[#191B1F]/70 shadow-md`,
@@ -36,17 +35,9 @@ const Header: React.FC = () => {
         <span className={style.brand}>Bullscope Swap</span>
       </div>
 
-      {/* Centro: Pill + mini toggle Swap / Limit */}
+      {/* Centro: solo la Pill brand */}
       <div className={style.center}>
         <BullseyePill />
-        <nav className="flex items-center gap-2 mt-1">
-          <Link href="/">
-            <span className="pill">Swap</span>
-          </Link>
-          <Link href="/limit">
-            <span className="pill">Limit</span>
-          </Link>
-        </nav>
       </div>
 
       {/* Destra: Connect/Account */}
@@ -59,20 +50,6 @@ const Header: React.FC = () => {
           </button>
         )}
       </div>
-
-      <style jsx>{`
-        .pill {
-          padding: 6px 10px;
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          background: rgba(255, 255, 255, 0.06);
-          font-size: 12px;
-          transition: background 0.15s ease;
-        }
-        .pill:hover {
-          background: rgba(255, 255, 255, 0.12);
-        }
-      `}</style>
     </header>
   )
 }

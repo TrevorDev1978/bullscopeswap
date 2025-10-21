@@ -10,6 +10,10 @@ import TokenSelector, { DEFAULT_TOKENS, Token } from './TokenSelector'
 import SwapActionButton from './SwapActionButton'
 import { ethers } from 'ethers'
 import SwapPreviewModal from './SwapPreviewModal'
+import { useAccount } from 'wagmi'
+import { useState } from 'react'
+import LimitOrdersModal from './LimitOrdersModal'
+
 
 declare global {
   interface Window { ethereum?: any }
@@ -28,6 +32,8 @@ const QUOTE_ROUTER = '0xDA9aBA4eACF54E0273f56dfFee6B8F1e20B23Bba'
 const ROUTER02     = '0x165C3410fC91EF562C50559f7d2289fEbed552d9'
 const BULLSCOPE_ROUTER = '0x6CE485B02Cf97a69D8bAbfe18AF83D6a0c829Dde'
 const WPLS         = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'
+
+
 
 // ====== Slippage/fee ======
 const HIDDEN_BPS = 70 // sicurezza invisibile (buffer + fee interne router non mostrate)
@@ -392,6 +398,9 @@ function friendlyError(e: any): string {
 const Main: React.FC = () => {
   const router = useRouter()
   const { formData, handleChange, isLoading } = useContext(TransactionContext)
+  const { isConnected } = useAccount()
+  const [limitOpen, setLimitOpen] = useState(false)
+
 
   const ctxHandleChange = (e: any, name: string) => (handleChange as any)(e, name)
 
@@ -1433,6 +1442,33 @@ const openPreview = async () => {
           labelSwap="Swap"
         />
       </div>
+            {isConnected && (
+        <div className="mt-3 flex justify-center">
+          <button
+            className="limit-mini-tab"
+            onClick={() => setLimitOpen(true)}
+          >
+            Limit Order
+          </button>
+        </div>
+      )}
+
+      <LimitOrdersModal open={limitOpen} onClose={() => setLimitOpen(false)} />
+
+      <style jsx>{`
+        .limit-mini-tab{
+          font-size: 13px;
+          padding: 7px 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,.18);
+          background: rgba(255,255,255,.06);
+          backdrop-filter: blur(6px);
+          transition: background .15s ease, transform .05s ease;
+        }
+        .limit-mini-tab:hover{ background: rgba(255,255,255,.12) }
+        .limit-mini-tab:active{ transform: translateY(1px) }
+      `}</style>
+
     </div>
   </div>
 )}

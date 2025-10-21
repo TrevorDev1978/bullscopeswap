@@ -1,7 +1,11 @@
+// pages/limit.tsx
 import type { NextPage } from 'next'
 import Head from 'next/head'
 import Header from '../components/Header'
-import LimitTab from '../components/LimitTab'
+import dynamic from 'next/dynamic'
+
+// Lazy per evitare SSR flicker
+const LimitTab = dynamic(() => import('../components/LimitTab'), { ssr: false })
 
 const LimitPage: NextPage = () => {
   return (
@@ -12,7 +16,9 @@ const LimitPage: NextPage = () => {
       </Head>
       <Header />
       <main className="flex-1 flex justify-center items-start mt-10">
-        <LimitTab />
+        <div className="w-full max-w-xl">
+          <LimitTab />
+        </div>
       </main>
     </div>
   )
