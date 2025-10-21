@@ -796,7 +796,7 @@ const openPreview = async () => {
   } catch {
     // niente
   }
-
++};
 
 
   // ====== SWAP REALE ======
@@ -1205,187 +1205,238 @@ const openPreview = async () => {
 
 
       <div className={style.wrapper + ((editing || selOpen) ? ' bls-reduce-motion' : '')}>
-        {/* SHELL con animazione flip-away */}
-        {/* SHELL con animazione flip-away */}
+{/* SHELL con animazione flip-away */}
 {!previewOpen && (
-  <>
-    {(() => {
-      const shellStyle: React.CSSProperties = {
-        transformStyle: 'preserve-3d',
-        perspective: '1200px',
-        transition: 'transform .2s ease',
-        ...(warp ? { willChange: 'transform, opacity' } : {}), // ✅ solo durante warp
-      }
-
-      return (
-        <div
-          id="swap-anim-shell"
-          className={warp ? 'bls-warp' : ''}
-          style={shellStyle}
-        >
-      )
-    })()}
-
+  <div
+    id="swap-anim-shell"
+    className={warp ? 'bls-warp' : ''}
+    style={{
+      transformStyle: 'preserve-3d',
+      perspective: '1200px',
+      transition: 'transform .2s ease',
+      ...(warp ? { willChange: 'transform, opacity' } : {}),
+    }}
+  >
     <div
       id="swap-page"
       className="rounded-2xl p-6 shadow-lg"
       style={{ transform: 'perspective(800px)', transition: 'transform 0.25s ease-out' }}
     >
-
-
- 
-
-            {/* Header pannello */}
-            <div className={style.formHeader}>
-              <div className="flex items-center gap-3">
-                <div className="bls-brand-title bls-brand-title--panel bls-brand-3d">Bullscope Swap</div>
-              </div>
-              <button
-                id="bls-slippage-btn"
-                aria-label="Open slippage settings"
-                onClick={() => setSlippageOpen(true)}
-                className="inline-flex items-center justify-center"
-                title="Slippage settings"
-              >
-                <RiSettings3Fill />
-              </button>
-            </div>
-
-            {/* You pay */}
-            <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
-              <div className="row-title">You pay</div>
-
-              <div className="balance-pill">
-                <span>
-                  Balance{' '}
-                  {payRB
-                    ? `${Number(payRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${payToken.symbol}`
-                    : '-'}
-                </span>
-                {payRB && payRB.raw > 0n && (
-                  <button
-                    className="max-btn"
-                    onClick={()=>{
-                      let raw = payRB.raw
-                      if (payToken.address === 'native' && raw > GAS_BUFFER_WEI) raw -= GAS_BUFFER_WEI
-                      const v = formatUnitsBI(raw, payRB.decimals, 18)
-                      setAmountIn(v)
-                      setLastEdited('in')
-                      ctxHandleChange({ target: { value: v } } as any, 'amount')
-                    }}
-                  >MAX</button>
-                )}
-              </div>
-
-              <div className={style.currencySelector}>
-                <button className="token-select token-select--clean" onClick={() => openSelector('pay')}>
-                  <img className="token-icon" src={iconSrc(payToken)} alt={payToken.symbol} onError={iconFallback}/>
-                  <span className="token-ticker">{payToken.symbol}</span>
-                  <AiOutlineDown className="token-chevron" style={{ opacity: .9, fontSize: 14, marginLeft: 6 }} />
-                </button>
-              </div>
-
-              <div className="amount-input flex-1 text-right" style={{ position:'relative', cursor:'text' }}>
-                <input
-  inputMode="decimal"
-  autoComplete="off"
-  type="text"
-  className={style.transferPropInput + ' text-right amount--lower'}
-  placeholder="0.0"
-  pattern="^[0-9]*[.,]?[0-9]*$"
-  value={amountIn}
-  onFocus={() => setEditing(true)}
-  onBlur={() => setEditing(false)}
-  onChange={(e) => {
-    setAmountIn(e.target.value)
-    setLastEdited('in')
-  }}
-/>
-
-                <div style={{ marginTop: 4, fontSize: 11, color: 'rgba(230,238,250,0.90)', textAlign: 'right' }}>
-                  {usdUnderPay}
-                </div>
-                {(!amountIn || Number(toNum(amountIn)) === 0) ? null : insufficientBalance && (
-                  <div style={{ marginTop: 6, fontSize: 12, color: '#ef4444', textAlign: 'right', fontWeight: 700 }}>
-                    Insufficient balance
-                  </div>
-                )}
-                {sameTokenSelected && (
-                  <div style={{ marginTop: 6, fontSize: 12, color: '#ef4444', textAlign: 'right', fontWeight: 700 }}>
-                    Select a different token
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Flip */}
-            <div style={centerArrowWrap}>
-              <button
-                style={centerArrowBtn}
-                className="flip-btn"
-                onClick={flip}
-                aria-label="Switch tokens"
-              >
-                ⇅
-              </button>
-            </div>
-
-            {/* You receive */}
-            <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
-              <div className="row-title">You receive</div>
-
-              <div className="balance-pill">
-                <span>
-                  Balance{' '}
-                  {rcvRB
-                    ? `${Number(rcvRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${rcvToken.symbol}`
-                    : '-'}
-                </span>
-              </div>
-
-              <div className={style.currencySelector}>
-                <button className="token-select token-select--clean" onClick={() => openSelector('receive')}>
-                  <img className="token-icon" src={iconSrc(rcvToken)} alt={rcvToken.symbol} onError={iconFallback}/>
-                  <span className="token-ticker">{rcvToken.symbol}</span>
-                  <AiOutlineDown className="token-chevron" style={{ opacity: .9, fontSize: 14, marginLeft: 6 }} />
-                </button>
-              </div>
-
-              <div className="amount-input flex-1 text-right" style={{ position:'relative', cursor:'text' }}>
-                <input
-  inputMode="decimal"
-  autoComplete="off"
-  type="text"
-  className={style.transferPropInput + ' text-right amount--lower'}
-  placeholder="0.0"
-  value={amountOut}
-  onFocus={() => setEditing(true)}
-  onBlur={() => setEditing(false)}
-  onChange={(e) => {
-    setAmountOut(e.target.value)
-    setLastEdited('out')
-  }}
-  readOnly={false}
-/>
-
-                <div style={{ marginTop: 4, fontSize: 11, color: 'rgba(230,238,250,0.90)', textAlign: 'right' }}>
-                  {usdUnderRcv}
-                </div>
-              </div>
-            </div>
-
-            {/* Azione */}
-            <div className="actions">
-              <SwapActionButton
-                onSwap={openPreview}
-                disabled={isLoading || !formValid}
-                labelSwap="Swap"
-              />
-            </div>
+      {/* Header pannello */}
+      <div className={style.formHeader}>
+        <div className="flex items-center gap-3">
+          <div className="bls-brand-title bls-brand-title--panel bls-brand-3d">
+            Bullscope Swap
           </div>
         </div>
-       </>
+        <button
+          id="bls-slippage-btn"
+          aria-label="Open slippage settings"
+          onClick={() => setSlippageOpen(true)}
+          className="inline-flex items-center justify-center"
+          title="Slippage settings"
+        >
+          <RiSettings3Fill />
+        </button>
+      </div>
+
+      {/* You pay */}
+      <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
+        <div className="row-title">You pay</div>
+
+        <div className="balance-pill">
+          <span>
+            Balance{' '}
+            {payRB
+              ? `${Number(payRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${payToken.symbol}`
+              : '-'}
+          </span>
+          {payRB && payRB.raw > 0n && (
+            <button
+              className="max-btn"
+              onClick={() => {
+                let raw = payRB.raw
+                if (payToken.address === 'native' && raw > GAS_BUFFER_WEI) raw -= GAS_BUFFER_WEI
+                const v = formatUnitsBI(raw, payRB.decimals, 18)
+                setAmountIn(v)
+                setLastEdited('in')
+                ctxHandleChange({ target: { value: v } } as any, 'amount')
+              }}
+            >
+              MAX
+            </button>
+          )}
+        </div>
+
+        <div className={style.currencySelector}>
+          <button
+            className="token-select token-select--clean"
+            onClick={() => openSelector('pay')}
+          >
+            <img
+              className="token-icon"
+              src={iconSrc(payToken)}
+              alt={payToken.symbol}
+              onError={iconFallback}
+            />
+            <span className="token-ticker">{payToken.symbol}</span>
+            <AiOutlineDown
+              className="token-chevron"
+              style={{ opacity: 0.9, fontSize: 14, marginLeft: 6 }}
+            />
+          </button>
+        </div>
+
+        <div
+          className="amount-input flex-1 text-right"
+          style={{ position: 'relative', cursor: 'text' }}
+        >
+          <input
+            inputMode="decimal"
+            autoComplete="off"
+            type="text"
+            className={style.transferPropInput + ' text-right amount--lower'}
+            placeholder="0.0"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            value={amountIn}
+            onFocus={() => setEditing(true)}
+            onBlur={() => setEditing(false)}
+            onChange={(e) => {
+              setAmountIn(e.target.value)
+              setLastEdited('in')
+            }}
+          />
+
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 11,
+              color: 'rgba(230,238,250,0.90)',
+              textAlign: 'right',
+            }}
+          >
+            {usdUnderPay}
+          </div>
+          {(!amountIn || Number(toNum(amountIn)) === 0)
+            ? null
+            : insufficientBalance && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 12,
+                    color: '#ef4444',
+                    textAlign: 'right',
+                    fontWeight: 700,
+                  }}
+                >
+                  Insufficient balance
+                </div>
+              )}
+          {sameTokenSelected && (
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 12,
+                color: '#ef4444',
+                textAlign: 'right',
+                fontWeight: 700,
+              }}
+            >
+              Select a different token
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Flip */}
+      <div style={centerArrowWrap}>
+        <button
+          style={centerArrowBtn}
+          className="flip-btn"
+          onClick={flip}
+          aria-label="Switch tokens"
+        >
+          ⇅
+        </button>
+      </div>
+
+      {/* You receive */}
+      <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
+        <div className="row-title">You receive</div>
+
+        <div className="balance-pill">
+          <span>
+            Balance{' '}
+            {rcvRB
+              ? `${Number(rcvRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${rcvToken.symbol}`
+              : '-'}
+          </span>
+        </div>
+
+        <div className={style.currencySelector}>
+          <button
+            className="token-select token-select--clean"
+            onClick={() => openSelector('receive')}
+          >
+            <img
+              className="token-icon"
+              src={iconSrc(rcvToken)}
+              alt={rcvToken.symbol}
+              onError={iconFallback}
+            />
+            <span className="token-ticker">{rcvToken.symbol}</span>
+            <AiOutlineDown
+              className="token-chevron"
+              style={{ opacity: 0.9, fontSize: 14, marginLeft: 6 }}
+            />
+          </button>
+        </div>
+
+        <div
+          className="amount-input flex-1 text-right"
+          style={{ position: 'relative', cursor: 'text' }}
+        >
+          <input
+            inputMode="decimal"
+            autoComplete="off"
+            type="text"
+            className={style.transferPropInput + ' text-right amount--lower'}
+            placeholder="0.0"
+            value={amountOut}
+            onFocus={() => setEditing(true)}
+            onBlur={() => setEditing(false)}
+            onChange={(e) => {
+              setAmountOut(e.target.value)
+              setLastEdited('out')
+            }}
+            readOnly={false}
+          />
+
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 11,
+              color: 'rgba(230,238,250,0.90)',
+              textAlign: 'right',
+            }}
+          >
+            {usdUnderRcv}
+          </div>
+        </div>
+      </div>
+
+      {/* Azione */}
+      <div className="actions">
+        <SwapActionButton
+          onSwap={openPreview}
+          disabled={isLoading || !formValid}
+          labelSwap="Swap"
+        />
+      </div>
+    </div>
+  </div>
 )}
+
 
         {/* Loader TX legacy */}
         {router.query.loading ? (
