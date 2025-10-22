@@ -13,7 +13,7 @@ import {
   http,
 } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { injected, walletConnect } from 'wagmi/connectors'
+import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors'
 import MobileAutoConnector from '../components/MobileAutoConnector' // ✅ Auto-connect mobile
 
 // 👉 PulseChain
@@ -33,7 +33,7 @@ const pulsechain = {
 
 // ✅ ENV obbligatori per WalletConnect mobile
 const WALLETCONNECT_ID =
-  process.env.NEXT_PUBLIC_WALLETCONNECT_ID || '' // deve essere VALIDO (niente 'demo')
+  process.env.NEXT_PUBLIC_WALLETCONNECT_ID || '' // deve essere VALIDO (no “demo”)
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL || 'https://bullscopeswap.vercel.app' // URL pubblico
 const APP_ICON = `${APP_URL}/favicon.ico` // icona https assoluta
@@ -48,11 +48,20 @@ const config = createConfig({
   },
   connectors: [
     injected({ shimDisconnect: true }),
+
+    // ✅ Coinbase Wallet aggiunto
+    coinbaseWallet({
+      appName: 'Bullscope Swap',
+      preference: 'all',
+      appLogoUrl: APP_ICON,
+    }),
+
+    // ✅ WalletConnect con QR UFFICIALE (come PulseX)
     ...(hasWC
       ? [
           walletConnect({
             projectId: WALLETCONNECT_ID,
-            showQrModal: false,
+            showQrModal: true, // 👈 mostra QR ufficiale WalletConnect
             metadata: {
               name: 'Bullscope Swap',
               description: 'DEX on PulseChain',

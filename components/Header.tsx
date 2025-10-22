@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useAccount } from 'wagmi'
-import { useConnectModal } from '@rainbow-me/rainbowkit'
 import BullseyePill from './BullseyePill'
+import PulseXConnectPanel from './PulseXConnectPanel'
 
 const style = {
   wrapper: `bls-header px-6 py-4 w-full flex justify-between items-center bg-[#191B1F]/70 shadow-md`,
@@ -14,10 +14,11 @@ const style = {
 
 const Header: React.FC = () => {
   const { isConnected, address } = useAccount()
-  const { openConnectModal } = useConnectModal()
+  const [open, setOpen] = useState(false)
 
   const short = useMemo(
-    () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : 'Connect Wallet'),
+    () =>
+      address ? `${address.slice(0, 6)}…${address.slice(-4)}` : 'Connect Wallet',
     [address]
   )
 
@@ -45,11 +46,14 @@ const Header: React.FC = () => {
         {isConnected ? (
           <div className="btn-wallet px-4">{short}</div>
         ) : (
-          <button onClick={() => openConnectModal?.()} className="btn-wallet px-4">
+          <button onClick={() => setOpen(true)} className="btn-wallet px-4">
             Connect Wallet
           </button>
         )}
       </div>
+
+      {/* 🔹 Pannello identico a PulseX */}
+      <PulseXConnectPanel open={open} onClose={() => setOpen(false)} />
     </header>
   )
 }
