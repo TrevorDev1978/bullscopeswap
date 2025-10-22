@@ -1,23 +1,44 @@
-// components/SwapActionButton.tsx
-import { useAccount } from 'wagmi';
-import { useConnectModal } from '@rainbow-me/rainbowkit';
+import React, { useState } from 'react'
+import { useAccount } from 'wagmi'
+import PulseXConnectPanel from './PulseXConnectPanel'
 
-type Props = { onSwap: () => void; disabled?: boolean; labelSwap?: string };
+type Props = {
+  onSwap: () => void
+  disabled?: boolean
+  labelSwap?: string
+}
 
-export default function SwapActionButton({ onSwap, disabled, labelSwap = 'Swap' }: Props){
-  const { isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
+export default function SwapActionButton({
+  onSwap,
+  disabled,
+  labelSwap = 'Swap',
+}: Props) {
+  const { isConnected } = useAccount()
+  const [open, setOpen] = useState(false)
 
   if (!isConnected) {
     return (
-      <button type="button" className="btn-wallet" onClick={() => openConnectModal?.()}>
-        Connect Wallet
-      </button>
-    );
+      <>
+        <button
+          type="button"
+          className="btn-wallet"
+          onClick={() => setOpen(true)}
+        >
+          Connect Wallet
+        </button>
+        <PulseXConnectPanel open={open} onClose={() => setOpen(false)} />
+      </>
+    )
   }
+
   return (
-    <button type="button" className="confirm-btn" onClick={onSwap} disabled={disabled}>
+    <button
+      type="button"
+      className="confirm-btn"
+      onClick={onSwap}
+      disabled={disabled}
+    >
       {labelSwap}
     </button>
-  );
+  )
 }

@@ -1,15 +1,19 @@
-// components/MobileAutoConnector.tsx
-import React, { useEffect, useRef } from 'react'
-import { useAccount } from 'wagmi'
-import { useConnectModal } from '@rainbow-me/rainbowkit'
+import { useEffect, useRef } from 'react'
+import { useAccount, useConnect } from 'wagmi'
 
-/** Rilevazione mobile semplice ma efficace */
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
+
+/** Rilevazione mobile semplice */
 function isMobileUA() {
   if (typeof navigator === 'undefined') return false
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 }
 
-/** PulseChain chain params (stesse di progetto) */
+/** PulseChain chain params (stesse del progetto) */
 const PULSE_CHAIN_HEX = '0x171' // 369
 const RPC_INFO = {
   chainId: PULSE_CHAIN_HEX,
@@ -49,7 +53,7 @@ async function ensurePulseChain(): Promise<boolean> {
   }
 }
 
-/** Deep link per aprire la DApp direttamente nel browser in-app di MetaMask Mobile */
+/** Deep link per aprire la DApp direttamente nel browser in-app di MetaMask Mobile (una sola volta per sessione) */
 function openInMetaMaskDappOncePerSession() {
   if (typeof window === 'undefined') return
   try {
@@ -61,61 +65,44 @@ function openInMetaMaskDappOncePerSession() {
 
     const hostAndPath = `${window.location.host}${window.location.pathname}${window.location.search}`
     const url = `https://metamask.app.link/dapp/${hostAndPath}`
-    // Redirect “morbido”: se MM non c’è, iOS/Android porteranno allo store
     window.location.href = url
   } catch {
     // silenzio
   }
 }
 
-/** Componente “parallelo” che non tocca il resto: tenta auto-connect su mobile */
-const MobileAutoConnector: React.FC = () => {
+/** Tenta auto-connect su mobile con injected; altrimenti prova deeplink MM. Nessun modal RainbowKit. */
+export default function MobileAutoConnector() {
   const { isConnected } = useAccount()
-  const { openConnectModal } = useConnectModal()
-
+  const { connect, connectors } = useConnect()
   const triedRef = useRef(false)
 
   useEffect(() => {
-    const run = async () => {
-      if (triedRef.current) return
-      triedRef.current = true
+    if (triedRef.current) return
+    if (!isMobileUA() || isConnected) return
+    triedRef.current = true
 
-      // Attiva solo su device mobile e solo se non sei già connesso
-      if (!isMobileUA() || isConnected) return
-
-      // 1) Se siamo nel browser in-app (ethereum presente), prova auto-connect diretto
-      const hasInjected = typeof window !== 'undefined' && !!(window as any).ethereum
-      if (hasInjected) {
-        try {
-          const ok = await ensurePulseChain()
-          if (ok) {
-            await (window as any).ethereum.request({ method: 'eth_requestAccounts' })
-            return // se va, finiamo qui
-          }
-        } catch {
-          // passa al piano B
-        }
-      }
-
-      // 2) Se NON c’è provider mobile, prova una volta a riaprire in MetaMask
-      if (!hasInjected) {
-        openInMetaMaskDappOncePerSession()
-        // Nota: se l’utente rientra e ancora non c’è provider, passiamo al piano C
-      }
-
-      // 3) Piano C: apri in automatico il modal di RainbowKit (WalletConnect)
+    ;(async () => {
       try {
-        // piccolo delay per evitare conflitti con SSR/hydration
-        setTimeout(() => openConnectModal?.(), 350)
+        const injected = connectors.find((c) => c.id === 'injected')
+        const hasInjected = typeof window !== 'undefined' && !!(window as any).ethereum
+
+        // 1) Browser in-app (injected): chain → connect
+        if (hasInjected && injected) {
+          await ensurePulseChain()
+          connect({ connector: injected })
+          return
+        }
+
+        // 2) Nessun injected → prova deeplink MetaMask (una volta per sessione)
+        if (!hasInjected) {
+          openInMetaMaskDappOncePerSession()
+        }
       } catch {
         // silenzio
       }
-    }
-
-    run()
-  }, [isConnected, openConnectModal])
+    })()
+  }, [isConnected, connect, connectors])
 
   return null
 }
-
-export default MobileAutoConnector
