@@ -17,8 +17,7 @@ const Header: React.FC = () => {
   const [open, setOpen] = useState(false)
 
   const short = useMemo(
-    () =>
-      address ? `${address.slice(0, 6)}…${address.slice(-4)}` : 'Connect Wallet',
+    () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : 'Connect Wallet'),
     [address]
   )
 
