@@ -58,7 +58,7 @@ const LimitOrdersModal: React.FC<Props> = ({ open, onClose }) => {
           {!showOrders ? (
             <LimitTab onPlaced={() => setShowOrders(true)} />
           ) : (
-            <OrdersPanel limitAddress={LIMIT_ADDRESS} ethers={ethers as any} account={address || null} />
+            <OrdersPanel limitAddress={LIMIT_ADDRESS} />
           )}
         </div>
       </div>
