@@ -1441,32 +1441,22 @@ const openPreview = async () => {
           labelSwap="Swap"
         />
       </div>
-            {isConnected && (
-        <div className="mt-3 flex justify-center">
-          <button
-            className="limit-mini-tab"
-            onClick={() => setLimitOpen(true)}
-          >
-            Limit Order
-          </button>
-        </div>
-      )}
+{/* ⬇️ NUOVA BARRA: identica per dimensioni/stile a una tab grande */}
+<div className="mt-4 grid grid-cols-2 gap-2">
+  <div className="h-[44px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold select-none">
+    Swap
+  </div>
+  <button
+    className="h-[44px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold hover:bg-[rgba(255,255,255,.12)]"
+    onClick={() => setLimitOpen(true)}
+  >
+    Limit Order Swap
+  </button>
+</div>
 
-      <LimitOrdersModal open={limitOpen} onClose={() => setLimitOpen(false)} />
+{/* Modal Limit Orders con tab Create / My Orders */}
+<LimitOrdersModal open={limitOpen} onClose={() => setLimitOpen(false)} />
 
-      <style jsx>{`
-        .limit-mini-tab{
-          font-size: 13px;
-          padding: 7px 12px;
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,.18);
-          background: rgba(255,255,255,.06);
-          backdrop-filter: blur(6px);
-          transition: background .15s ease, transform .05s ease;
-        }
-        .limit-mini-tab:hover{ background: rgba(255,255,255,.12) }
-        .limit-mini-tab:active{ transform: translateY(1px) }
-      `}</style>
 
     </div>
   </div>

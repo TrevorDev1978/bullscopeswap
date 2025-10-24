@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import TokenSelector, { DEFAULT_TOKENS, Token } from './TokenSelector'
 import { AiOutlineDown } from 'react-icons/ai'
-import { ethers } from 'ethers' // ✅ import diretto, niente più window.ethers
+import { ethers } from 'ethers'
 
 // ====== Chain ======
 const PULSE_CHAIN_HEX = '0x171'
@@ -54,7 +54,7 @@ async function ethCall(address: string, data: string) {
         }) as string
       }
     }
-  } catch { }
+  } catch {}
   const r = await fetch(RPC_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -69,9 +69,13 @@ async function getTokenDecimals(addr: string) {
   const n = parseInt(res, 16); return Number.isFinite(n) ? n : 18
 }
 
-// ====== Reference Price (Dexscreener) ======
+// ====== Reference Price (DEXTools-first) ======
 const DS_TTL = 60_000
+const DXT_TTL = 30_000
 const _dsCache: Record<string, { ts: number; priceUsd: number; pairs: any[] }> = {}
+const DEXT_KEY = process.env.NEXT_PUBLIC_DEXTOOLS_KEY || ''
+const _dxtCache: Record<string, { ts: number; priceUsd: number }> = {}
+
 async function dexscreener(address: string) {
   const key = address.toLowerCase()
   const now = Date.now()
@@ -86,6 +90,36 @@ async function dexscreener(address: string) {
   _dsCache[key] = out
   return out
 }
+
+async function dextoolsUsd(address: string): Promise<number | null> {
+  if (!DEXT_KEY) return null
+  const key = address.toLowerCase()
+  const now = Date.now()
+  const c = _dxtCache[key]
+  if (c && now - c.ts < DXT_TTL) return c.priceUsd
+  try {
+    const r = await fetch(`https://api.dextools.io/v2/token/pulsechain/${key}`, { headers: { 'X-API-Key': DEXT_KEY } })
+    if (!r.ok) return null
+    const j: any = await r.json()
+    const usd = parseFloat(j?.data?.priceUsd ?? j?.data?.price ?? '0') || 0
+    if (usd <= 0) return null
+    _dxtCache[key] = { ts: now, priceUsd: usd }
+    return usd
+  } catch { return null }
+}
+
+async function refRatioBuyPerSellUSD(tokenIn: string, tokenOut: string) {
+  // 1) prova DEXTools (se key)
+  const usdInDXT = await dextoolsUsd(tokenIn)
+  const usdOutDXT = await dextoolsUsd(tokenOut)
+  if (usdInDXT && usdOutDXT && usdInDXT > 0 && usdOutDXT > 0) return usdOutDXT / usdInDXT
+  // 2) fallback Dexscreener USD ratio
+  const [dsIn, dsOut] = await Promise.all([dexscreener(tokenIn), dexscreener(tokenOut)])
+  if (dsIn.priceUsd > 0 && dsOut.priceUsd > 0) return dsOut.priceUsd / dsIn.priceUsd
+  // 3) fallback on-chain mid-price (reserves)
+  return await computePoolMidPrice(tokenIn, tokenOut)
+}
+
 async function computePoolMidPrice(tokenIn: string, tokenOut: string) {
   const { pairs } = await dexscreener(tokenIn)
   const onPulse = pairs.filter((p: any) => String(p?.chainId || '').toLowerCase().includes('pulse'))
@@ -117,7 +151,7 @@ async function computePoolMidPrice(tokenIn: string, tokenOut: string) {
 
 // ====== UI ======
 const style = {
-  box: `relative bg-[#20242A] my-3 rounded-2xl p-4 text-xl border border-[#2A2F36] hover:border-[#41444F] flex justify-between items-center`,
+  box: `relative my-3 rounded-2xl p-4 text-xl flex justify-between items-center border`,
   input: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-3xl text-white text-right`,
 }
 
@@ -133,21 +167,36 @@ const LimitTab: React.FC = () => {
   const openSel = (s: 'sell' | 'buy') => { setSelSide(s); setSelOpen(true) }
   const onSelect = (t: Token) => { (selSide === 'sell' ? setSell : setBuy)(t) }
 
-  // Reference price updater
+  // Reference price updater — DEXTools first
   const [refPrice, setRefPrice] = useState<number>(0)
+  const [refSource, setRefSource] = useState<'DEXTools' | 'Dexscreener' | 'On-chain' | '—'>('—')
   const refTimer = useRef<any>(null)
   useEffect(() => {
     let alive = true
     async function update() {
       const aIn = (sell.address === 'native' ? WPLS : sell.address)
       const aOut = (buy.address === 'native' ? WPLS : buy.address)
+      // prova USD ratio (DEXTools -> Dexscreener) poi on-chain
+      const dxtIn = await dextoolsUsd(aIn)
+      const dxtOut = await dextoolsUsd(aOut)
+      if (alive && dxtIn && dxtOut && dxtIn > 0 && dxtOut > 0) {
+        setRefPrice(dxtOut / dxtIn)
+        setRefSource('DEXTools')
+        return
+      }
+      const [dsIn, dsOut] = await Promise.all([dexscreener(aIn), dexscreener(aOut)])
+      if (alive && dsIn.priceUsd > 0 && dsOut.priceUsd > 0) {
+        setRefPrice(dsOut.priceUsd / dsIn.priceUsd)
+        setRefSource('Dexscreener')
+        return
+      }
       const p = await computePoolMidPrice(aIn, aOut)
-      if (alive) setRefPrice(p)
+      if (alive) { setRefPrice(p); setRefSource('On-chain') }
     }
     update()
     const tick = () => { refTimer.current = setTimeout(async () => { await update(); tick() }, 30_000) }
     tick()
-    return () => { alive = false; clearTimeout(refTimer.current) }
+    return () => { clearTimeout(refTimer.current) }
   }, [sell.address, buy.address])
 
   // Derive minOut
@@ -174,9 +223,10 @@ const LimitTab: React.FC = () => {
     const _minOut = parseUnitsBI(minOut || '0', buy.address === 'native' ? 18 : aOutDec)
     if (_amountIn <= 0n || _minOut <= 0n) return
 
-    const provider = new ethers.providers.Web3Provider((window as any).ethereum)
-    const signer = await provider.getSigner()
-    const limit = new ethers.Contract(LIMIT_ADDRESS, ABI_LIMIT, signer)
+    const E: any = ethers as any
+    const provider = E.BrowserProvider ? new E.BrowserProvider((window as any).ethereum) : new E.providers.Web3Provider((window as any).ethereum)
+    const signer = provider.getSigner ? await provider.getSigner() : await provider.getSigner(0)
+    const limit = new E.Contract(LIMIT_ADDRESS, ABI_LIMIT, signer)
 
     const tipWei = (sell.address === 'native' ? 0n : 20000000000000000n)
 
@@ -189,10 +239,11 @@ const LimitTab: React.FC = () => {
       )
       await tx.wait()
     } else {
-      const erc20 = new ethers.Contract(sell.address, ABI_ERC20, signer)
+      const erc20 = new E.Contract(sell.address, ABI_ERC20, signer)
       const owner = await signer.getAddress()
       const allowance = await erc20.allowance(owner, LIMIT_ADDRESS)
-      if (allowance < _amountIn) {
+      const allowanceBI = allowance?._isBigNumber || allowance?._hex ? BigInt(allowance._hex || '0x0') : BigInt(allowance ?? 0)
+      if (allowanceBI < _amountIn) {
         const txA = await erc20.approve(LIMIT_ADDRESS, _amountIn)
         await txA.wait()
       }
@@ -209,16 +260,21 @@ const LimitTab: React.FC = () => {
     setAmountIn(''); setTargetPrice(''); setMinOut('')
   }
 
-  const priceHint = refPrice > 0 ? `${refPrice.toLocaleString('en-US', { maximumFractionDigits: 10 })} ${buy.symbol} / ${sell.symbol}` : '—'
+  const priceHint = refPrice > 0
+    ? `${refPrice.toLocaleString('en-US', { maximumFractionDigits: 10 })} ${buy.symbol} / ${sell.symbol}`
+    : '—'
 
   return (
     <div className="w-full max-w-xl">
-      <div className="px-2 flex items-center justify-between mb-1">
-        <div className="font-semibold">Limit Order</div>
+      {/* Header barra identica a Swap */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className="flex-1 h-[40px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold">
+          Limit Order Swap
+        </div>
       </div>
 
       {/* You sell */}
-      <div className={style.box}>
+      <div className={`${style.box} bg-[#20242A] border-[#2A2F36] hover:border-[#41444F]`}>
         <div className="row-title">You sell</div>
         <button className="token-select token-select--clean" onClick={() => openSel('sell')}>
           <img className="token-icon" src={sell.icon || '/images/no-token.png'} alt={sell.symbol} />
@@ -229,7 +285,7 @@ const LimitTab: React.FC = () => {
       </div>
 
       {/* You buy */}
-      <div className={style.box}>
+      <div className={`${style.box} bg-[#20242A] border-[#2A2F36] hover:border-[#41444F]`}>
         <div className="row-title">You buy</div>
         <button className="token-select token-select--clean" onClick={() => openSel('buy')}>
           <img className="token-icon" src={buy.icon || '/images/no-token.png'} alt={buy.symbol} />
@@ -240,10 +296,10 @@ const LimitTab: React.FC = () => {
       </div>
 
       {/* Target Price */}
-      <div className="bg-[#20242A] rounded-2xl border border-[#2A2F36] p-4">
+      <div className="rounded-2xl border border-[rgba(120,170,240,.55)] p-4 bg-[rgba(255,255,255,.06)] backdrop-blur-[6px]">
         <div className="flex items-center justify-between mb-2">
           <div className="dim">Target price</div>
-          <div className="text-sm opacity-80">Ref: {priceHint}</div>
+          <div className="text-sm opacity-80">Ref: {priceHint} <span className="opacity-60">({refSource})</span></div>
         </div>
         <div className="flex gap-2">
           <input className="flex-1 bg-black/20 border border-white/10 rounded-xl px-3 py-2 outline-none"
