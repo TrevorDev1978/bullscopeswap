@@ -1447,15 +1447,36 @@ const openPreview = async () => {
     Swap
   </div>
   <button
-    className="h-[44px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold hover:bg-[rgba(255,255,255,.12)]"
-    onClick={() => setLimitOpen(true)}
-  >
-    Limit Order Swap
-  </button>
+  className="h-[44px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold hover:bg-[rgba(255,255,255,.12)]"
+  onClick={() => {
+    // ✅ Verifica prima che i campi di swap siano compilati correttamente
+    const validAmount = amountIn && Number(String(amountIn).replace(',', '.')) > 0
+    const same = (payToken.address === 'native' ? WPLS : payToken.address).toLowerCase() ===
+                 (rcvToken.address === 'native' ? WPLS : rcvToken.address).toLowerCase()
+    if (!validAmount || same) {
+      alert('Compila prima lo Swap: seleziona due token diversi e inserisci l’importo.')
+      return
+    }
+    setLimitOpen(true)
+  }}
+>
+  Limit Order Swap
+</button>
+
 </div>
 
 {/* Modal Limit Orders con tab Create / My Orders */}
-<LimitOrdersModal open={limitOpen} onClose={() => setLimitOpen(false)} />
+<LimitOrdersModal
+  open={limitOpen}
+  onClose={() => setLimitOpen(false)}
+  prefill={{
+    sell: payToken,
+    buy: rcvToken,
+    amountIn: amountIn || '',
+    useCurrentOnOpen: true, // ✅ Target price già impostato su “Use current”
+  }}
+/>
+
 
 
     </div>

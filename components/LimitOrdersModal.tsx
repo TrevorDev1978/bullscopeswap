@@ -2,16 +2,31 @@ import React, { useState } from 'react'
 import Modal from 'react-modal'
 import LimitTab from './LimitTab'
 import OrdersPanel from './OrdersPanel'
+import { Token } from './TokenSelector'
 
-type Props = { open: boolean; onClose: () => void }
+type Prefill = {
+  sell: Token
+  buy: Token
+  amountIn: string
+  useCurrentOnOpen?: boolean
+}
+type Props = { open: boolean; onClose: () => void; prefill?: Prefill }
 
 const LIMIT_ADDRESS = '0xFEa1023F5d52536beFc71c3404E356ae81C82F4B'
 
 const modalStyles: Modal.Styles = {
-  overlay: { backgroundColor: 'rgba(10, 11, 13, 0.75)', zIndex: 60 },
+  overlay: {
+    backgroundColor: 'rgba(10, 11, 13, 0.75)',
+    zIndex: 60,
+    // ⬇️ centra sempre
+    position: 'fixed',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: {
     inset: 'unset',
-    margin: '6vh auto',
     width: 'min(760px, 96vw)',
     padding: 16,
     borderRadius: 18,
@@ -19,10 +34,11 @@ const modalStyles: Modal.Styles = {
     border: '1px solid rgba(120,170,240,.35)',
     color: '#eaf6ff',
     boxShadow: '0 30px 70px rgba(0,0,0,.55)',
+    overflow: 'visible',
   },
 }
 
-const LimitOrdersModal: React.FC<Props> = ({ open, onClose }) => {
+const LimitOrdersModal: React.FC<Props> = ({ open, onClose, prefill }) => {
   const [showOrders, setShowOrders] = useState(false)
 
   return (
@@ -32,15 +48,12 @@ const LimitOrdersModal: React.FC<Props> = ({ open, onClose }) => {
             style={{ color:'#bfe5ff', textShadow:'0 0 10px rgba(124,200,255,.25)' }}>
           Limit Order Swap
         </h3>
-
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowOrders(s => !s)}
             className="px-3 py-1.5 rounded-xl border border-[rgba(120,170,240,.45)]
                        bg-[rgba(255,255,255,.06)] hover:bg-[rgba(255,255,255,.12)]
-                       font-semibold"
-            title="View your orders"
-          >
+                       font-semibold" title="View your orders">
             My Orders
           </button>
           <button onClick={onClose}
@@ -49,7 +62,7 @@ const LimitOrdersModal: React.FC<Props> = ({ open, onClose }) => {
       </div>
 
       {!showOrders ? (
-        <LimitTab />
+        <LimitTab prefill={prefill} />
       ) : (
         <div className="mt-1">
           <OrdersPanel limitAddress={LIMIT_ADDRESS} />
