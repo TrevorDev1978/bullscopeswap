@@ -4,16 +4,15 @@ import TokenSelector, { DEFAULT_TOKENS, Token } from './TokenSelector'
 import { AiOutlineDown } from 'react-icons/ai'
 import { ethers } from 'ethers'
 
-/* ====== Chain & Router ====== */
 const RPC_URL = 'https://rpc.pulsechain.com'
 const PULSE_CHAIN_HEX = '0x171'
 const WPLS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'
 const LIMIT_ADDRESS = '0xFEa1023F5d52536beFc71c3404E356ae81C82F4B'
 
-/* ====== ABIs minimi ====== */
 const ABI_LIMIT = [
   'function placeOrderERC20(address tokenIn,address tokenOut,uint256 amountIn,uint256 minOut,uint256 expiry) payable returns (uint256)',
   'function placeOrderPLS(address tokenOut,uint256 minOut,uint256 expiry) payable returns (uint256)',
+  'function setNextTipPLS(uint256 tip) payable',
 ]
 const ABI_ERC20 = [
   'function decimals() view returns (uint8)',
@@ -21,10 +20,7 @@ const ABI_ERC20 = [
   'function allowance(address owner,address spender) view returns (uint256)',
 ]
 
-/* ====== Helpers ====== */
 const SELECTOR = { decimals: '0x313ce567' }
-const addrParam = (addr: string) => ('0'.repeat(24) + addr.toLowerCase().replace(/^0x/, ''))
-const hexToBigInt = (hex: string) => (!hex || hex === '0x' ? 0n : BigInt(hex))
 const parseUnitsBI = (s: string, decimals = 18) => {
   const [i, f = ''] = s.replace(/,/g, '').replace(',', '.').split('.')
   const frac = (f + '0'.repeat(decimals)).slice(0, decimals)
@@ -40,7 +36,6 @@ const formatUnitsBI = (v: bigint, decimals = 18, maxFrac = 6) => {
   return (neg ? '-' : '') + ip.toString() + (fp ? '.' + fp : '')
 }
 
-/* ====== eth_call safe ====== */
 async function ethCall(to: string, data: string) {
   try {
     if ((window as any).ethereum) {
@@ -68,9 +63,8 @@ async function getTokenDecimals(addr: string) {
   return Number.isFinite(n) ? n : 18
 }
 
-/* ====== Current price (Dexscreener USD) ======
-   Ritorna SEMPRE: 1 sell = X buy  (X = outUsd / inUsd) */
-const DS_TTL = 60_000
+// ====== Current price (Dexscreener) ======
+const DS_TTL = 120_000
 const _usdCache: Record<string, { ts: number; v: number }> = {}
 async function usdPrice(addr: string): Promise<number> {
   const key = addr.toLowerCase()
@@ -86,188 +80,165 @@ async function usdPrice(addr: string): Promise<number> {
   return v
 }
 async function refRatioBuyPerSellUSD(tokenIn: string, tokenOut: string): Promise<number> {
-  // 1 sell (tokenIn) => ? buy (tokenOut)
-  const [inUsd, outUsd] = await Promise.all([
-    usdPrice(tokenIn), usdPrice(tokenOut),
-  ])
+  const [inUsd, outUsd] = await Promise.all([usdPrice(tokenIn), usdPrice(tokenOut)])
   if (inUsd > 0 && outUsd > 0) return outUsd / inUsd
   return 0
 }
 
-/* ====== Props ====== */
-type Prefill = {
-  sell: Token
-  buy: Token
-  amountIn: string
-  useCurrentOnOpen?: boolean
-}
-type Props = {
-  prefill?: Prefill
-  onPlaced?: (id?: number) => void
-}
-
-/* ====== Component ====== */
-const LimitTab: React.FC<Props> = ({ prefill, onPlaced }) => {
-  // Stato base (con prefill)
-  const [sell, setSell] = useState<Token>(prefill?.sell || DEFAULT_TOKENS.find(t=>t.symbol==='PLS')!)
-  const [buy,  setBuy ] = useState<Token>(prefill?.buy  || DEFAULT_TOKENS.find(t=>t.symbol==='BLSEYE')!)
+const LimitTab: React.FC<{ prefill?: any; onPlaced?: (id?: number) => void }> = ({ prefill, onPlaced }) => {
+  const [sell, setSell] = useState<Token>(prefill?.sell || DEFAULT_TOKENS.find(t => t.symbol === 'PLS')!)
+  const [buy, setBuy] = useState<Token>(prefill?.buy || DEFAULT_TOKENS.find(t => t.symbol === 'BLSEYE')!)
   const [amountIn, setAmountIn] = useState<string>(prefill?.amountIn || '')
+  const [targetPrice, setTargetPrice] = useState<string>('')
+  const [amountOut, setAmountOut] = useState<string>('')
 
-  // Target price (buy per 1 sell) e amountOut derivato
-  const [targetPrice, setTargetPrice] = useState<string>('') // stringa input
-  const [amountOut,  setAmountOut ] = useState<string>('')   // view-only
+  const [tipPLS, setTipPLS] = useState<string>('0')
+  const [expiryMode, setExpiryMode] = useState<'min'|'h'|'d'>('d')
+  const [expiryVal, setExpiryVal] = useState<string>('30')
+  const parsePLS = (s: string) => {
+    const n = Number.parseFloat((s || '0').replace(',', '.'))
+    if (!Number.isFinite(n) || n <= 0) return 0n
+    return BigInt(Math.floor(n * 1e18))
+  }
 
-  // Se il prefill cambia (riapertura), riallinea tutto (target sarà impostato su "Use current" appena arriva la ref)
-  useEffect(() => {
-    if (!prefill) return
-    setSell(prefill.sell)
-    setBuy(prefill.buy)
-    setAmountIn(prefill.amountIn || '')
-    setTargetPrice('')
-    setAmountOut('')
-    didAutofillRef.current = false
-  }, [prefill?.sell?.address, prefill?.buy?.address, prefill?.amountIn])
-
-  // Selector
   const [selOpen, setSelOpen] = useState(false)
   const [selSide, setSelSide] = useState<'sell'|'buy'>('sell')
-  const openSel = (s:'sell'|'buy') => { setSelSide(s); setSelOpen(true) }
-  const onSelect = (t: Token) => { (selSide==='sell'?setSell:setBuy)(t) }
+  const openSel = (s: 'sell'|'buy') => { setSelSide(s); setSelOpen(true) }
+  const onSelect = (t: Token) => { (selSide === 'sell' ? setSell : setBuy)(t) }
 
-  // ====== Current price (coerente con definizione "buy per sell") ======
-  const [ref, setRef] = useState<{v:number, src:string}>({ v:0, src:'Dexscreener' })
+  const [ref, setRef] = useState<{v:number,src:string}>({v:0,src:'Dexscreener'})
   useEffect(() => {
     let alive = true, timer:any
-    const aIn  = (sell.address === 'native' ? WPLS : sell.address)
-    const aOut = (buy.address  === 'native' ? WPLS : buy.address)
+    const aIn = (sell.address === 'native' ? WPLS : sell.address)
+    const aOut = (buy.address === 'native' ? WPLS : buy.address)
     const update = async () => {
-      const r = await refRatioBuyPerSellUSD(aIn, aOut) // <- outUsd / inUsd
-      if (alive) setRef({ v: r, src: 'Dexscreener' })
+      const r = await refRatioBuyPerSellUSD(aIn, aOut)
+      if (alive) setRef({v:r,src:'Dexscreener'})
     }
     update()
-    const loop = () => { timer = setTimeout(async () => { await update(); loop() }, DS_TTL) }
+    const loop = () => { timer = setTimeout(async()=>{await update();loop()},DS_TTL) }
     loop()
-    const onVis = () => { if (!document.hidden) { clearTimeout(timer); update().finally(loop) } }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { alive = false; clearTimeout(timer); document.removeEventListener('visibilitychange', onVis) }
-  }, [sell.address, buy.address])
+    return () => { alive=false; clearTimeout(timer) }
+  }, [sell.address,buy.address])
 
-  // ====== All'apertura: Target = Current ======
   const didAutofillRef = useRef(false)
   useEffect(() => {
     if (didAutofillRef.current) return
     if (prefill && prefill.useCurrentOnOpen === false) return
     if (ref.v > 0) {
       didAutofillRef.current = true
-      setTargetPrice(ref.v.toLocaleString('en-US', { maximumFractionDigits: 12 }))
+      setTargetPrice(ref.v.toLocaleString('en-US',{maximumFractionDigits:12}))
     }
   }, [ref.v, prefill])
 
-  // ====== Deriva sempre You receive = amountIn × targetPrice ======
   useEffect(() => {
-    const q = Number.parseFloat((amountIn || '0').replace(',', '.'))
-    const p = Number.parseFloat((targetPrice || '0').replace(',', '.'))
-    if (q > 0 && p > 0) setAmountOut((q * p).toLocaleString('en-US', { maximumFractionDigits: 12 }))
+    const q = Number.parseFloat((amountIn||'0').replace(',', '.'))
+    const p = Number.parseFloat((targetPrice||'0').replace(',', '.'))
+    if (q>0&&p>0) setAmountOut((q*p).toLocaleString('en-US',{maximumFractionDigits:12}))
     else setAmountOut('')
-  }, [amountIn, targetPrice])
+  }, [amountIn,targetPrice])
 
-  // Quick set: percentuali sul current
-  const setFromRef = (mult: number) => {
-    if (!(ref.v > 0)) return
-    const v = ref.v * mult
-    setTargetPrice(v.toLocaleString('en-US', { maximumFractionDigits: 12 }))
+  const setFromRef = (mult:number) => {
+    if(!(ref.v>0))return
+    const v = ref.v*mult
+    setTargetPrice(v.toLocaleString('en-US',{maximumFractionDigits:12}))
   }
 
-  // ====== PLACE ORDER ======
   async function place() {
     if (!(window as any).ethereum) return
     try {
       const cid = await (window as any).ethereum.request({ method: 'eth_chainId' })
       if (cid !== PULSE_CHAIN_HEX) {
-        try {
-          await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: PULSE_CHAIN_HEX }] })
-        } catch {}
+        try { await (window as any).ethereum.request({ method:'wallet_switchEthereumChain', params:[{chainId:PULSE_CHAIN_HEX}] }) } catch {}
       }
     } catch {}
 
-    const E: any = ethers as any
+    const E:any = ethers as any
     const provider = E.BrowserProvider ? new E.BrowserProvider((window as any).ethereum) : new E.providers.Web3Provider((window as any).ethereum)
     const signer = provider.getSigner ? await provider.getSigner() : await provider.getSigner(0)
     const user = await signer.getAddress()
 
-    const [inDec, outDec] = await Promise.all([
-      getTokenDecimals(sell.address === 'native' ? WPLS : sell.address),
-      getTokenDecimals(buy.address  === 'native' ? WPLS : buy.address),
-    ])
+    const inDec = await getTokenDecimals(sell.address==='native'?WPLS:sell.address)
+    const outDec = await getTokenDecimals(buy.address==='native'?WPLS:buy.address)
+    const amountInRaw = parseUnitsBI(amountIn||'0',inDec)
+    const px = Number.parseFloat((targetPrice||'0').replace(',','.'))
+    if (amountInRaw<=0n||!(px>0)) return
 
-    const _amountIn = parseUnitsBI(amountIn || '0', sell.address === 'native' ? 18 : inDec)
-    const px = Number.parseFloat((targetPrice || '0').replace(',', '.'))
-    if (_amountIn <= 0n || !(px > 0)) return
+    const priceQ = BigInt(Math.floor(px*1e12))
+    const pow = outDec - inDec
+    let scaleUp = 1n, scaleDown = 1n
+    if (pow>0) scaleUp = 10n**BigInt(pow)
+    if (pow<0) scaleDown = 10n**BigInt(-pow)
+    const minOutRaw = (amountInRaw*priceQ*scaleUp)/(scaleDown*1_000_000_000_000n)
 
-    // minOut = amountIn × targetPrice
-    // attenzione ai decimali di out
-    // calcoliamo in fixed 1e12 per evitare float
-    const mult = BigInt(Math.floor(px * 1e12))
-    const _minOut = (_amountIn * mult) / BigInt(1e12)
+    const n = Math.max(1,Math.floor(Number(expiryVal||'0')))
+    let seconds=0
+    if(expiryMode==='min')seconds=n*60
+    if(expiryMode==='h')seconds=n*60*60
+    if(expiryMode==='d')seconds=n*24*60*60
+    const expiry=Math.floor(Date.now()/1000)+seconds
 
-    const limit = new E.Contract(LIMIT_ADDRESS, ABI_LIMIT, signer)
-    const expiry = Math.floor(Date.now()/1000) + 60*60*24*30 // 30 giorni
+    const limit=new E.Contract(LIMIT_ADDRESS,ABI_LIMIT,signer)
+    const tipWei=parsePLS(tipPLS)
 
-    if (sell.address === 'native') {
-      const tx = await limit.placeOrderPLS(buy.address === 'native' ? WPLS : buy.address, _minOut, expiry, { value: _amountIn })
+    if(sell.address==='native'){
+      if(tipWei>0n){
+        const txTip=await limit.setNextTipPLS(tipWei,{value:tipWei})
+        await txTip.wait()
+      }
+      const value=amountInRaw+tipWei
+      const tx=await limit.placeOrderPLS(buy.address==='native'?WPLS:buy.address,minOutRaw,expiry,{value})
       await tx.wait()
-    } else {
-      // approve se necessario
-      const erc20 = new E.Contract(sell.address, ABI_ERC20, signer)
-      const allowance = await erc20.allowance(user, LIMIT_ADDRESS)
-      const allowanceBI = (allowance?._hex ? BigInt(allowance._hex) : BigInt(allowance || 0))
-      if (allowanceBI < _amountIn) {
-        const txA = await erc20.approve(LIMIT_ADDRESS, _amountIn)
+    }else{
+      const erc20=new E.Contract(sell.address,ABI_ERC20,signer)
+      const allowance=await erc20.allowance(user,LIMIT_ADDRESS)
+      const allowanceBI=(allowance?._hex?BigInt(allowance._hex):BigInt(allowance||0))
+      if(allowanceBI<amountInRaw){
+        const txA=await erc20.approve(LIMIT_ADDRESS,amountInRaw)
         await txA.wait()
       }
-      const tx = await limit.placeOrderERC20(sell.address, buy.address === 'native' ? WPLS : buy.address, _amountIn, _minOut, expiry)
+      const tx=await limit.placeOrderERC20(
+        sell.address,
+        (buy.address==='native'?WPLS:buy.address),
+        amountInRaw,
+        minOutRaw,
+        expiry,
+        {value:tipWei}
+      )
       await tx.wait()
     }
     onPlaced?.()
   }
 
-  // ====== UI ======
-  const priceHint = useMemo(() => {
-    if (!(ref.v > 0)) return '—'
-    return `${ref.v.toLocaleString('en-US', { maximumFractionDigits: 12 })} ${buy.symbol} / ${sell.symbol}`
-  }, [ref.v, buy.symbol, sell.symbol])
+  const priceHint=useMemo(()=>{
+    if(!(ref.v>0))return '—'
+    return `${ref.v.toLocaleString('en-US',{maximumFractionDigits:12})} ${buy.symbol} / ${sell.symbol}`
+  },[ref.v,buy.symbol,sell.symbol])
 
   return (
     <div className="limit-wrap">
-      {/* header sottile come barra/titolo */}
       <div className="section-title">Limit Order Swap</div>
 
       {/* You sell */}
       <div className="box">
         <div className="row-title">You sell</div>
-        <button className="token-select" onClick={() => openSel('sell')}>
-          <img className="token-icon" src={sell.icon || '/images/no-token.png'} alt={sell.symbol} />
+        <button className="token-select" onClick={()=>openSel('sell')}>
+          <img className="token-icon" src={sell.icon||'/images/no-token.png'} alt={sell.symbol}/>
           <span className="token-ticker">{sell.symbol}</span>
-          <AiOutlineDown className="token-chevron" />
+          <AiOutlineDown className="token-chevron"/>
         </button>
-        <input
-          className="amount-input"
-          placeholder="0.0"
-          inputMode="decimal"
-          value={amountIn}
-          onChange={e => setAmountIn(e.target.value)}
-        />
+        <input className="amount-input" placeholder="0.0" inputMode="decimal" value={amountIn} onChange={e=>setAmountIn(e.target.value)}/>
       </div>
 
-      {/* You buy (derivato) */}
+      {/* You buy */}
       <div className="box">
         <div className="row-title">You buy</div>
-        <button className="token-select" onClick={() => openSel('buy')}>
-          <img className="token-icon" src={buy.icon || '/images/no-token.png'} alt={buy.symbol} />
+        <button className="token-select" onClick={()=>openSel('buy')}>
+          <img className="token-icon" src={buy.icon||'/images/no-token.png'} alt={buy.symbol}/>
           <span className="token-ticker">{buy.symbol}</span>
-          <AiOutlineDown className="token-chevron" />
+          <AiOutlineDown className="token-chevron"/>
         </button>
-        <div className="amount-out">{amountOut || '—'}</div>
+        <div className="amount-out">{amountOut||'—'}</div>
       </div>
 
       {/* Target price */}
@@ -276,109 +247,48 @@ const LimitTab: React.FC<Props> = ({ prefill, onPlaced }) => {
           <div className="dim">Target price</div>
           <div className="dim small">Current price: {priceHint} <span className="opacity-70">(Dexscreener)</span></div>
         </div>
-        <input
-          className="price-input"
-          placeholder={`${buy.symbol} per ${sell.symbol}`}
-          value={targetPrice}
-          onChange={e => setTargetPrice(e.target.value)}
-        />
+        <input className="price-input" placeholder={`${buy.symbol} per ${sell.symbol}`} value={targetPrice} onChange={e=>setTargetPrice(e.target.value)}/>
         <div className="pills">
-          <button className="pill" onClick={() => setFromRef(1.00)}>Use current</button>
-          <button className="pill" onClick={() => setFromRef(0.98)}>-2%</button>
-          <button className="pill" onClick={() => setFromRef(0.95)}>-5%</button>
-          <button className="pill" onClick={() => setFromRef(0.90)}>-10%</button>
-          <button className="pill" onClick={() => setFromRef(0.80)}>-20%</button>
-          <button className="pill" onClick={() => setFromRef(1.02)}>+2%</button>
-          <button className="pill" onClick={() => setFromRef(1.05)}>+5%</button>
-          <button className="pill" onClick={() => setFromRef(1.10)}>+10%</button>
-          <button className="pill" onClick={() => setFromRef(1.20)}>+20%</button>
+          <button className="pill" onClick={()=>setFromRef(1.00)}>Use current</button>
+          <button className="pill" onClick={()=>setFromRef(0.98)}>-2%</button>
+          <button className="pill" onClick={()=>setFromRef(0.95)}>-5%</button>
+          <button className="pill" onClick={()=>setFromRef(0.90)}>-10%</button>
+          <button className="pill" onClick={()=>setFromRef(0.80)}>-20%</button>
+          <button className="pill" onClick={()=>setFromRef(1.02)}>+2%</button>
+          <button className="pill" onClick={()=>setFromRef(1.05)}>+5%</button>
+          <button className="pill" onClick={()=>setFromRef(1.10)}>+10%</button>
+          <button className="pill" onClick={()=>setFromRef(1.20)}>+20%</button>
         </div>
       </div>
 
-      {/* CTA */}
+      {/* Tip PLS */}
+      <div className="box box--light">
+        <div className="box-head">
+          <div className="dim">Executor tip (PLS) — opzionale</div>
+          <div className="dim small">Incentiva l’esecuzione più rapida</div>
+        </div>
+        <input className="price-input" placeholder="0.00 (PLS)" value={tipPLS} onChange={e=>setTipPLS(e.target.value)}/>
+      </div>
+
+      {/* Expiry */}
+      <div className="box box--light">
+        <div className="box-head">
+          <div className="dim">Expiry</div>
+          <div className="dim small">Dopo la scadenza l’ordine non è più eseguibile</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <input className="price-input" style={{flex:1}} inputMode="numeric" value={expiryVal} onChange={e=>setExpiryVal(e.target.value)}/>
+          <select className="price-input" style={{flex:'0 0 120px'}} value={expiryMode} onChange={e=>setExpiryMode(e.target.value as any)}>
+            <option value="min">min</option>
+            <option value="h">hours</option>
+            <option value="d">days</option>
+          </select>
+        </div>
+      </div>
+
       <button className="place-btn" onClick={place}>Place Limit Order</button>
 
-      {/* Selector */}
-      <TokenSelector
-        open={selOpen}
-        side={selSide === 'sell' ? 'pay' : 'receive'}
-        onClose={() => setSelOpen(false)}
-        onSelect={onSelect}
-        excludeAddress={selSide === 'sell' ? (buy.address || '') : (sell.address || '')}
-      />
-
-      <style jsx>{`
-        .limit-wrap{ display:flex; flex-direction:column; gap:12px; }
-        .section-title{
-          font-weight:800; font-size:14px; letter-spacing:.2px;
-          border:1px solid rgba(120,170,240,.32);
-          background: rgba(255,255,255,.50);
-          color:#0f1622;
-          padding:8px 12px; border-radius:12px; text-align:center;
-        }
-        .box{
-          position:relative;
-          border:1px solid rgba(120,170,240,.40);
-          background: rgba(255,255,255,.80); /* più chiaro per leggibilità */
-          backdrop-filter: blur(4px);
-          border-radius:16px;
-          padding: 14px 12px 10px;
-          display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
-          color:#0f1622;
-        }
-        .box--light{
-          background: rgba(255,255,255,.88);
-        }
-        .row-title{ position:absolute; top:8px; left:12px; font-size:12px; opacity:.8; font-weight:700 }
-        .token-select{
-          display:flex; align-items:center; gap:8px;
-          border:1px solid rgba(120,170,240,.55);
-          background: #f6f9ff;
-          padding:8px 10px; border-radius:12px; font-weight:800; color:#0f1622;
-        }
-        .token-icon{ width:22px; height:22px; border-radius:999px; object-fit:cover }
-        .token-ticker{ font-weight:900; }
-        .token-chevron{ opacity:.8; font-size:14px; margin-left:6px }
-        .amount-input{
-          background: #f6f9ff;
-          border:1px solid rgba(120,170,240,.55);
-          border-radius:12px;
-          padding:10px 12px;
-          font-size:20px; font-weight:900; text-align:right; width:100%;
-          outline:none; color:#0f1622;
-        }
-        .amount-out{
-          padding:10px 12px; text-align:right; width:100%;
-          font-size:18px; font-weight:800; color:#0f1622;
-        }
-        .box-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px }
-        .dim{ opacity:.9; font-weight:700 }
-        .small{ font-size:12px }
-        .price-input{
-          width:100%;
-          background: #f6f9ff;
-          border:1px solid rgba(120,170,240,.50);
-          border-radius:12px;
-          padding:10px 12px; outline:none; font-weight:800; color:#0f1622;
-        }
-        .pills{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
-        .pill{
-          padding:6px 10px; border-radius:10px;
-          border:1px solid rgba(120,170,240,.55);
-          background:#eef6ff;
-          transition: background .15s ease, transform .06s ease;
-          font-weight:800; font-size:13px; color:#0f1622;
-        }
-        .pill:hover{ background:#e3f0ff }
-        .pill:active{ transform: translateY(1px) }
-        .place-btn{
-          height:46px; border-radius:14px;
-          width:100%; font-weight:900; color:#fff;
-          border:1px solid rgba(120,170,240,.65);
-          background: linear-gradient(180deg, #7cc8ff, #3b82f6);
-          box-shadow: inset 0 0 0 1px rgba(124,200,255,.18);
-        }
-      `}</style>
+      <TokenSelector open={selOpen} side={selSide==='sell'?'pay':'receive'} onClose={()=>setSelOpen(false)} onSelect={onSelect} excludeAddress={selSide==='sell'?(buy.address||''):(sell.address||'')} />
     </div>
   )
 }

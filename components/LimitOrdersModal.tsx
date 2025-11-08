@@ -1,5 +1,5 @@
 // components/LimitOrdersModal.tsx
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import Modal from 'react-modal'
 import dynamic from 'next/dynamic'
 import { Token } from './TokenSelector'
@@ -53,6 +53,10 @@ const LIMIT_ADDRESS = '0xFEa1023F5d52536beFc71c3404E356ae81C82F4B'
 
 const LimitOrdersModal: React.FC<Props> = ({ open, onClose, prefill }) => {
   const [tab, setTab] = useState<Tab>('create')
+  useEffect(() => {
+    // Se non c'è prefill apri direttamente My Orders
+    if (open && !prefill) setTab('orders')
+  }, [open, prefill])
   const headTitle = useMemo(() => 'Limit Order Swap', [])
 
   return (

@@ -13,7 +13,6 @@ import SwapPreviewModal from './SwapPreviewModal'
 import { useAccount } from 'wagmi'
 import LimitOrdersModal from './LimitOrdersModal'
 
-
 declare global {
   interface Window { ethereum?: any }
 }
@@ -32,8 +31,6 @@ const ROUTER02     = '0x165C3410fC91EF562C50559f7d2289fEbed552d9'
 const BULLSCOPE_ROUTER = '0x6CE485B02Cf97a69D8bAbfe18AF83D6a0c829Dde'
 const WPLS         = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'
 
-
-
 // ====== Slippage/fee ======
 const HIDDEN_BPS = 70 // sicurezza invisibile (buffer + fee interne router non mostrate)
 const DEFAULT_USER_SLIPPAGE = '0.5'
@@ -41,7 +38,7 @@ const GAS_BUFFER_WEI = 2_000_000_000_000_000n // ~0.002 PLS di buffer gas
 
 // ====== UI styles ======
 const style = {
-  wrapper: `w-screen flex items-center justify-center mt-12`,
+  wrapper: `w-screen flex items-center justify-center mt-6`, // ridotto margine top per compat
   formHeader: `px-2 flex items-center justify-between`,
   transferPropContainer: `relative bg-[#20242A] my-3 rounded-2xl p-4 text-xl border border-[#2A2F36] hover:border-[#41444F] flex justify-between items-center`,
   transferPropInput: `bg-transparent placeholder:text-[#B2B9D2] outline-none w-full text-3xl text-white`,
@@ -125,7 +122,6 @@ async function ethCall(to: string, data: string) {
   return ethCallSafe(to, data)
 }
 
-// --- AGGIUNGI in alto, vicino ad ethCall:
 const RPC_URL = 'https://rpc.pulsechain.com'
 
 async function ethCallSafe(to: string, data: string) {
@@ -156,6 +152,7 @@ async function ethCallSafe(to: string, data: string) {
   if (j?.error) throw new Error(j.error.message || 'eth_call failed')
   return j.result as string
 }
+
 async function getBalanceSafe(account: string) {
   // wallet se già su Pulse…
   try {
@@ -183,10 +180,8 @@ async function getBalanceSafe(account: string) {
   return j.result as string
 }
 
-
 // --- Dexscreener icon hydration (solo se manca l'icona) ---
 const dexsIconCache: Record<string, string> = {}
-
 
 async function hydrateTokenIcon(t: Token, setter: (v: Token) => void) {
   if (!t || t.icon || t.address === 'native') return
@@ -207,8 +202,6 @@ async function hydrateTokenIcon(t: Token, setter: (v: Token) => void) {
   } catch { /* noop */ }
 }
 
-
-
 async function ensurePulseChain(): Promise<boolean> {
   if (!window.ethereum) return false
   try {
@@ -227,6 +220,7 @@ async function ensurePulseChain(): Promise<boolean> {
     }
   } catch { return false }
 }
+
 const decimalsCache = new Map<string, number>()
 async function getTokenDecimals(tokenAddr: string): Promise<number> {
   if (tokenAddr === 'native') return 18
@@ -243,7 +237,6 @@ async function erc20BalanceOf(tokenAddr: string, account: string): Promise<bigin
   const res = await ethCallSafe(tokenAddr, data)
   return hexToBigInt(res)
 }
-
 
 // ====== Explorer link ======
 const otterscanTx = (hash?: string|null) => hash ? `https://otter.pulsechain.com/tx/${hash}` : '#'
@@ -274,7 +267,6 @@ const card: React.CSSProperties = {
   overflow: 'hidden',
   backgroundClip: 'padding-box',
 }
-
 
 const coinWrap: React.CSSProperties = { width: 64, height: 64, perspective: 800 }
 const coin: React.CSSProperties = {
@@ -324,7 +316,7 @@ const tokenIconCss: React.CSSProperties = { width:18, height:18, borderRadius:99
    ========================= */
 const _dsPriceCache: Record<string, { v: number; ts: number }> = {}
 const _dsInFlight: Record<string, Promise<number> | undefined> = {}
-const DS_TTL = 60_000
+const DS_TTL = 120_000 // 2 min (meno stress CPU)
 async function fetchUsdPriceOnce(addrLC: string): Promise<number> {
   const now = Date.now()
   const c = _dsPriceCache[addrLC]
@@ -400,10 +392,21 @@ const Main: React.FC = () => {
   const { isConnected } = useAccount()
   const [limitOpen, setLimitOpen] = useState(false)
 
-
   const ctxHandleChange = (e: any, name: string) => (handleChange as any)(e, name)
 
   useEffect(() => { if (typeof window !== 'undefined') Modal.setAppElement('#__next') }, [])
+
+  // Compat mode: taglia animazioni/3D su macchine/browser lenti → elimina flicker e scroll issues
+  const [compat, setCompat] = useState(false)
+  useEffect(() => {
+    try {
+      const lowHW = (navigator as any).hardwareConcurrency && (navigator as any).hardwareConcurrency <= 4
+      const weakMem = (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4
+      const no3D = !(window.CSS && CSS.supports && CSS.supports('transform-style', 'preserve-3d'))
+      const prefersReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (lowHW || weakMem || no3D || prefersReduce) setCompat(true)
+    } catch { /* noop */ }
+  }, [])
 
   useEffect(() => {
     const onRej = (ev: PromiseRejectionEvent) => {
@@ -451,7 +454,6 @@ const Main: React.FC = () => {
 
   const [lastEdited, setLastEdited] = useState<'in' | 'out'>('in')
   const [editing, setEditing] = useState(false)
-
 
   // PREZZI USD
   const payPriceUsd = useUsdPrice(payToken)
@@ -508,9 +510,7 @@ const Main: React.FC = () => {
   const [payRB, setPayRB] = useState<RB | null>(null)
   const [rcvRB, setRcvRB] = useState<RB | null>(null)
 
-  
   async function refreshBalance(token: Token, setter: (v: RB | null) => void, acc: string | null) {
-
     try {
       if (!window.ethereum || !acc) { setter(null); return }
 
@@ -532,10 +532,8 @@ const Main: React.FC = () => {
     }
   }
 
-  
   useEffect(() => { refreshBalance(payToken, setPayRB, account) }, [payToken, account])
   useEffect(() => { refreshBalance(rcvToken, setRcvRB, account) }, [rcvToken, account])
-
 
   // QUOTE utils
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -590,7 +588,7 @@ const Main: React.FC = () => {
     if (!candidatePaths.length) { setAmountOut(''); setBestPath(null); return }
 
     if (quoteTimer.current) clearTimeout(quoteTimer.current)
-        quoteTimer.current = setTimeout(async () => {
+    quoteTimer.current = setTimeout(async () => {
       try {
         const inDec = await getTokenDecimals(payToken.address)
         const outDec = await getTokenDecimals(rcvToken.address)
@@ -613,7 +611,6 @@ const Main: React.FC = () => {
       } catch { setBestPath(null); setAmountOut('') }
     }, 220)
 
-
     return () => { if (quoteTimer.current) clearTimeout(quoteTimer.current) }
   }, [amountIn, candidatePaths, payToken, rcvToken, lastEdited])
 
@@ -625,7 +622,7 @@ const Main: React.FC = () => {
     if (!candidatePaths.length) { return } // stesso token o nessun path
 
     if (quoteTimer.current) clearTimeout(quoteTimer.current)
-        quoteTimer.current = setTimeout(async () => {
+    quoteTimer.current = setTimeout(async () => {
       try {
         const inDec  = await getTokenDecimals(payToken.address)
         const outDec = await getTokenDecimals(rcvToken.address)
@@ -654,7 +651,6 @@ const Main: React.FC = () => {
       }
     }, 220)
 
-
     return () => { if (quoteTimer.current) clearTimeout(quoteTimer.current) }
   }, [amountOut, candidatePaths, payToken, rcvToken, lastEdited])
 
@@ -682,7 +678,8 @@ const Main: React.FC = () => {
   useEffect(() => () => { if (hideLater.current) clearTimeout(hideLater.current) }, [])
 
   // ====== VALIDAZIONI UI ======
-  const sameTokenSelected = useMemo(() => wrapAddr(payToken) === wrapAddr(rcvToken), [payToken, rcvToken])
+  const sameTokenSelected = useMemo(() => (payToken.address === 'native' ? WPLS : payToken.address) === (rcvToken.address === 'native' ? WPLS : rcvToken.address), [payToken, rcvToken])
+
   const insufficientBalance = useMemo(() => {
     if (!payRB) return false
     const dec = payRB.decimals ?? 18
@@ -717,95 +714,94 @@ const Main: React.FC = () => {
     : '/images/no-token.png')
 
   // ====== WARP (flip-away 3D) ======
-const [warp, setWarp] = useState(false)
-const warpTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-// timer per ritardare l'apertura del modal di preview
-const openPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [warp, setWarp] = useState(false)
+  const warpTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // timer per ritardare l'apertura del modal di preview
+  const openPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-useEffect(() => () => {
-  if (warpTimer.current) clearTimeout(warpTimer.current)
-  if (openPreviewTimer.current) clearTimeout(openPreviewTimer.current)
-}, [])
-
-const openPreview = async () => {
-  try {
-    if (!window.ethereum) return
-    const ok = await ensurePulseChain(); if (!ok) return
-    if (!amountIn || Number(toNum(amountIn)) <= 0) return
-    if (!candidatePaths.length) return
-    if (insufficientBalance) return
-    ctxHandleChange({ target: { value: amountIn } } as any, 'amount')
-
-    // --- Avvia subito l'animazione e prepara i timer
+  useEffect(() => () => {
     if (warpTimer.current) clearTimeout(warpTimer.current)
     if (openPreviewTimer.current) clearTimeout(openPreviewTimer.current)
+  }, [])
 
-    const t0 = Date.now()
-    setWarp(true)
-    // manteniamo lo stato "warp" per 3s, poi lo spegniamo
-    warpTimer.current = setTimeout(() => setWarp(false), 800)
-
-    // --- Calcolo quote/preview in parallelo all'animazione
-    const inDec  = await getTokenDecimals(payToken.address)
-    const outDec = await getTokenDecimals(rcvToken.address)
-    const amountInRaw = parseUnitsBI(amountIn, inDec)
-    const path = (bestPath && bestPath.length >= 2) ? bestPath : candidatePaths[0]
-    if (!path) return
-
-    // Quote corrente
-    const outRaw = await bestAmountsOut(amountInRaw, path)
-    const amountOutEst = outRaw > 0n ? formatUnitsBI(outRaw, outDec, 12) : ''
-
-    // Prezzo (rcv / pay)
-    const inNum  = Number(formatUnitsBI(amountInRaw, inDec, 18))
-    const outNum = Number(formatUnitsBI(outRaw, outDec, 18))
-    const price  = (inNum > 0 && Number.isFinite(outNum/inNum)) ? outNum / inNum : 0
-    const priceLabel = price
-      ? `${price.toLocaleString('en-US', { maximumFractionDigits: 8 })} ${rcvToken.symbol} / ${payToken.symbol}`
-      : '—'
-
-    // Slippage & min received (utente + hidden buffer)
-    const slipUserBps = Math.max(0, Math.round((Number(slippage || '0') || 0) * 100))
-    const totalCut = BigInt(Math.min(9999, slipUserBps + HIDDEN_BPS))
-    const minOutRaw = outRaw > 0n ? (outRaw * (10000n - totalCut)) / 10000n : 0n
-    const minReceivedLabel = minOutRaw > 0n
-      ? `${formatUnitsBI(minOutRaw, outDec, 12)} ${rcvToken.symbol}`
-      : '—'
-
-    // Price impact (stima veloce)
-    let priceImpactLabel = '—'
+  const openPreview = async () => {
     try {
-      const unit = 10n ** BigInt(inDec)
-      const smallIn = unit / 10000n > 0n ? unit / 10000n : 1n
-      const smallOut = await bestAmountsOut(smallIn, path)
-      if (smallOut > 0n && outRaw > 0n && amountInRaw > 0n) {
-        const baseRate = Number(formatUnitsBI(smallOut, outDec, 18)) / Number(formatUnitsBI(smallIn, inDec, 18))
-        const actRate  = outNum / inNum
-        if (baseRate > 0 && Number.isFinite(actRate)) {
-          const impact = Math.max(0, (1 - (actRate / baseRate)) * 100)
-          priceImpactLabel = `${impact.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+      if (!window.ethereum) return
+      const ok = await ensurePulseChain(); if (!ok) return
+      if (!amountIn || Number(toNum(amountIn)) <= 0) return
+      if (!candidatePaths.length) return
+      if (insufficientBalance) return
+      ctxHandleChange({ target: { value: amountIn } } as any, 'amount')
+
+      // --- Avvia subito l'animazione e prepara i timer
+      if (warpTimer.current) clearTimeout(warpTimer.current)
+      if (openPreviewTimer.current) clearTimeout(openPreviewTimer.current)
+
+      const t0 = Date.now()
+      setWarp(true)
+      // manteniamo lo stato "warp" per 0.8s, poi lo spegniamo
+      warpTimer.current = setTimeout(() => setWarp(false), 800)
+
+      // --- Calcolo quote/preview in parallelo all'animazione
+      const inDec  = await getTokenDecimals(payToken.address)
+      const outDec = await getTokenDecimals(rcvToken.address)
+      const amountInRaw = parseUnitsBI(amountIn, inDec)
+      const path = (bestPath && bestPath.length >= 2) ? bestPath : candidatePaths[0]
+      if (!path) return
+
+      // Quote corrente
+      const outRaw = await bestAmountsOut(amountInRaw, path)
+      const amountOutEst = outRaw > 0n ? formatUnitsBI(outRaw, outDec, 12) : ''
+
+      // Prezzo (rcv / pay)
+      const inNum  = Number(formatUnitsBI(amountInRaw, inDec, 18))
+      const outNum = Number(formatUnitsBI(outRaw, outDec, 18))
+      const price  = (inNum > 0 && Number.isFinite(outNum/inNum)) ? outNum / inNum : 0
+      const priceLabel = price
+        ? `${price.toLocaleString('en-US', { maximumFractionDigits: 8 })} ${rcvToken.symbol} / ${payToken.symbol}`
+        : '—'
+
+      // Slippage & min received (utente + hidden buffer)
+      const slipUserBps = Math.max(0, Math.round((Number(slippage || '0') || 0) * 100))
+      const totalCut = BigInt(Math.min(9999, slipUserBps + HIDDEN_BPS))
+      const minOutRaw = outRaw > 0n ? (outRaw * (10000n - totalCut)) / 10000n : 0n
+      const minReceivedLabel = minOutRaw > 0n
+        ? `${formatUnitsBI(minOutRaw, outDec, 12)} ${rcvToken.symbol}`
+        : '—'
+
+      // Price impact (stima veloce)
+      let priceImpactLabel = '—'
+      try {
+        const unit = 10n ** BigInt(inDec)
+        const smallIn = unit / 10000n > 0n ? unit / 10000n : 1n
+        const smallOut = await bestAmountsOut(smallIn, path)
+        if (smallOut > 0n && outRaw > 0n && amountInRaw > 0n) {
+          const baseRate = Number(formatUnitsBI(smallOut, outDec, 18)) / Number(formatUnitsBI(smallIn, inDec, 18))
+          const actRate  = outNum / inNum
+          if (baseRate > 0 && Number.isFinite(actRate)) {
+            const impact = Math.max(0, (1 - (actRate / baseRate)) * 100)
+            priceImpactLabel = `${impact.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+          }
         }
-      }
-    } catch { /* safe fallback */ }
+      } catch { /* safe fallback */ }
 
-    setPreview({
-      amountOutEst,
-      priceLabel,
-      minReceivedLabel,
-      priceImpactLabel
-    })
+      setPreview({
+        amountOutEst,
+        priceLabel,
+        minReceivedLabel,
+        priceImpactLabel
+      })
 
-    // --- Apri il modal esattamente al termine dei 3s dell'animazione
-    const elapsed = Date.now() - t0
-    const left = Math.max(0, 800 - elapsed)
-    openPreviewTimer.current = setTimeout(() => {
-      setPreviewOpen(true)
-    }, left)
-  } catch {
-    // niente
+      // --- Apri il modal esattamente al termine degli 0.8s dell'animazione
+      const elapsed = Date.now() - t0
+      const left = Math.max(0, 800 - elapsed)
+      openPreviewTimer.current = setTimeout(() => {
+        setPreviewOpen(true)
+      }, left)
+    } catch {
+      // niente
+    }
   }
-};
-
 
   // ====== SWAP REALE ======
   const onSwapClick = async () => {
@@ -889,11 +885,11 @@ const openPreview = async () => {
     }
   }
 
+  const reduceMotion = compat || editing || selOpen
 
   return (
-
     <>
-       {/* Overlay Approve/Swap — ELEGANT AZURE AURORA */}
+      {/* Overlay Approve/Swap — ELEGANT AZURE AURORA */}
       {flow.open && (
         <div style={overlayWrap}>
           {/* Aurora / mist sullo sfondo */}
@@ -1156,336 +1152,313 @@ const openPreview = async () => {
               0%,100% { opacity:0; transform: scale(1); }
               40%     { opacity:.8; transform: scale(1.6); }
             }
-  /* Animazioni coin spin + flip-away integrate */
-  @keyframes blsSpinY {
-    0% { transform: rotateY(0deg); }
-    100% { transform: rotateY(360deg); }
-  }
+            /* Animazioni coin spin + flip-away integrate */
+            @keyframes blsSpinY {
+              0% { transform: rotateY(0deg); }
+              100% { transform: rotateY(360deg); }
+            }
 
-  #swap-anim-shell.bls-warp {
-    animation: blsSpinShrinkAway 0.8s linear forwards;
-  }
-  @keyframes blsSpinShrinkAway {
-    0% {
-      transform: translateZ(0) rotateY(0deg) scale(1);
-      opacity: 1;
-    }
-    100% {
-      transform: translateZ(-2400px) rotateY(720deg) scale(0.02);
-      opacity: 0;
-    }
-  }
+            #swap-anim-shell.bls-warp {
+              animation: blsSpinShrinkAway 0.8s linear forwards;
+            }
+            @keyframes blsSpinShrinkAway {
+              0% {
+                transform: translateZ(0) rotateY(0deg) scale(1);
+                opacity: 1;
+              }
+              100% {
+                transform: translateZ(-2400px) rotateY(720deg) scale(0.02);
+                opacity: 0;
+              }
+            }
 
-/* ↓↓ Pause animazioni quando si digita o se l’utente preferisce meno motion ↓↓ */
-@media (prefers-reduced-motion: reduce) {
-  #swap-anim-shell,
-  .bls-sparkles,
-  .bls-brand-3d {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-.bls-reduce-motion #swap-anim-shell,
-.bls-reduce-motion .bls-sparkles,
-.bls-reduce-motion .bls-brand-3d {
-  animation: none !important;
-  transition: none !important;
-}
+            /* ↓↓ Pause animazioni quando si digita o se l’utente preferisce meno motion ↓↓ */
+            @media (prefers-reduced-motion: reduce) {
+              #swap-anim-shell,
+              .bls-sparkles,
+              .bls-brand-3d {
+                animation: none !important;
+                transition: none !important;
+              }
+            }
+            .bls-reduce-motion #swap-anim-shell,
+            .bls-reduce-motion .bls-sparkles,
+            .bls-reduce-motion .bls-brand-3d {
+              animation: none !important;
+              transition: none !important;
+            }
 
-
-  .bls-preview-enter {
-    animation: blsSpinGrowIn 0.8s linear forwards;
-  }
-  @keyframes blsSpinGrowIn {
-    0% {
-      transform: translateZ(-2400px) rotateY(-720deg) scale(0.02);
-      opacity: 0;
-    }
-    100% {
-      transform: translateZ(0) rotateY(0deg) scale(1);
-      opacity: 1;
-    }
-  }
-
+            .bls-preview-enter {
+              animation: blsSpinGrowIn 0.8s linear forwards;
+            }
+            @keyframes blsSpinGrowIn {
+              0% {
+                transform: translateZ(-2400px) rotateY(-720deg) scale(0.02);
+                opacity: 0;
+              }
+              100% {
+                transform: translateZ(0) rotateY(0deg) scale(1);
+                opacity: 1;
+              }
+            }
           `}</style>
         </div>
       )}
 
-
-      <div className={style.wrapper + ((editing || selOpen) ? ' bls-reduce-motion' : '')}>
-{/* SHELL con animazione flip-away */}
-{!previewOpen && (
-  <div
-    id="swap-anim-shell"
-    className={warp ? 'bls-warp' : ''}
-    style={{
-      transformStyle: 'preserve-3d',
-      perspective: '1200px',
-      transition: 'transform .2s ease',
-      ...(warp ? { willChange: 'transform, opacity' } : {}),
-    }}
-  >
-    <div
-      id="swap-page"
-      className="rounded-2xl p-6 shadow-lg"
-      style={{ transform: 'perspective(800px)', transition: 'transform 0.25s ease-out' }}
-    >
-      {/* Header pannello */}
-      <div className={style.formHeader}>
-        <div className="flex items-center gap-3">
-          <div className="bls-brand-title bls-brand-title--panel bls-brand-3d">
-            Bullscope Swap
-          </div>
-        </div>
-        <button
-          id="bls-slippage-btn"
-          aria-label="Open slippage settings"
-          onClick={() => setSlippageOpen(true)}
-          className="inline-flex items-center justify-center"
-          title="Slippage settings"
-        >
-          <RiSettings3Fill />
-        </button>
-      </div>
-
-      {/* You pay */}
-      <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
-        <div className="row-title">You pay</div>
-
-        <div className="balance-pill">
-          <span>
-            Balance{' '}
-            {payRB
-              ? `${Number(payRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${payToken.symbol}`
-              : '-'}
-          </span>
-          {payRB && payRB.raw > 0n && (
-            <button
-              className="max-btn"
-              onClick={() => {
-                let raw = payRB.raw
-                if (payToken.address === 'native' && raw > GAS_BUFFER_WEI) raw -= GAS_BUFFER_WEI
-                const v = formatUnitsBI(raw, payRB.decimals, 18)
-                setAmountIn(v)
-                setLastEdited('in')
-                ctxHandleChange({ target: { value: v } } as any, 'amount')
-              }}
-            >
-              MAX
-            </button>
-          )}
-        </div>
-
-        <div className={style.currencySelector}>
-          <button
-            className="token-select token-select--clean"
-            onClick={() => openSelector('pay')}
-          >
-            <img
-              className="token-icon"
-              src={iconSrc(payToken)}
-              alt={payToken.symbol}
-              onError={iconFallback}
-            />
-            <span className="token-ticker">{payToken.symbol}</span>
-            <AiOutlineDown
-              className="token-chevron"
-              style={{ opacity: 0.9, fontSize: 14, marginLeft: 6 }}
-            />
-          </button>
-        </div>
-
-        <div
-          className="amount-input flex-1 text-right"
-          style={{ position: 'relative', cursor: 'text' }}
-        >
-          <input
-            inputMode="decimal"
-            autoComplete="off"
-            type="text"
-            className={style.transferPropInput + ' text-right amount--lower'}
-            placeholder="0.0"
-            pattern="^[0-9]*[.,]?[0-9]*$"
-            value={amountIn}
-            onFocus={() => setEditing(true)}
-            onBlur={() => setEditing(false)}
-            onChange={(e) => {
-              setAmountIn(e.target.value)
-              setLastEdited('in')
-            }}
-          />
-
+      <div className={style.wrapper + (reduceMotion ? ' bls-reduce-motion' : '')}>
+        {/* SHELL con animazione flip-away */}
+        {!previewOpen && (
           <div
+            id="swap-anim-shell"
+            className={warp ? 'bls-warp' : ''}
             style={{
-              marginTop: 4,
-              fontSize: 11,
-              color: 'rgba(230,238,250,0.90)',
-              textAlign: 'right',
+              transformStyle: 'preserve-3d',
+              perspective: '1200px',
+              transition: 'transform .2s ease',
+              ...(warp ? { willChange: 'transform, opacity' } : {}),
             }}
           >
-            {usdUnderPay}
-          </div>
-          {(!amountIn || Number(toNum(amountIn)) === 0)
-            ? null
-            : insufficientBalance && (
-                <div
-                  style={{
-                    marginTop: 6,
-                    fontSize: 12,
-                    color: '#ef4444',
-                    textAlign: 'right',
-                    fontWeight: 700,
-                  }}
-                >
-                  Insufficient balance
-                </div>
-              )}
-          {sameTokenSelected && (
             <div
-              style={{
-                marginTop: 6,
-                fontSize: 12,
-                color: '#ef4444',
-                textAlign: 'right',
-                fontWeight: 700,
-              }}
+              id="swap-page"
+              className="rounded-2xl p-6 shadow-lg"
+              style={{ transform: 'perspective(800px)', transition: 'transform 0.25s ease-out' }}
             >
-              Select a different token
+              {/* Header pannello */}
+              <div className={style.formHeader}>
+                <div className="flex items-center gap-3">
+                  <div className="bls-brand-title bls-brand-title--panel bls-brand-3d">
+                    Bullscope Swap
+                  </div>
+                </div>
+                <button
+                  id="bls-slippage-btn"
+                  aria-label="Open slippage settings"
+                  onClick={() => setSlippageOpen(true)}
+                  className="inline-flex items-center justify-center"
+                  title="Slippage settings"
+                >
+                  <RiSettings3Fill />
+                </button>
+              </div>
+
+              {/* You pay */}
+              <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
+                <div className="row-title">You pay</div>
+
+                <div className="balance-pill">
+                  <span>
+                    Balance{' '}
+                    {payRB
+                      ? `${Number(payRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${payToken.symbol}`
+                      : '-'}
+                  </span>
+                  {payRB && payRB.raw > 0n && (
+                    <button
+                      className="max-btn"
+                      onClick={() => {
+                        let raw = payRB.raw
+                        if (payToken.address === 'native' && raw > GAS_BUFFER_WEI) raw -= GAS_BUFFER_WEI
+                        const v = formatUnitsBI(raw, payRB.decimals, 18)
+                        setAmountIn(v)
+                        setLastEdited('in')
+                        ctxHandleChange({ target: { value: v } } as any, 'amount')
+                      }}
+                    >
+                      MAX
+                    </button>
+                  )}
+                </div>
+
+                <div className={style.currencySelector}>
+                  <button
+                    className="token-select token-select--clean"
+                    onClick={() => openSelector('pay')}
+                  >
+                    <img
+                      className="token-icon"
+                      src={iconSrc(payToken)}
+                      alt={payToken.symbol}
+                      onError={iconFallback}
+                    />
+                    <span className="token-ticker">{payToken.symbol}</span>
+                    <AiOutlineDown
+                      className="token-chevron"
+                      style={{ opacity: 0.9, fontSize: 14, marginLeft: 6 }}
+                    />
+                  </button>
+                </div>
+
+                <div
+                  className="amount-input flex-1 text-right"
+                  style={{ position: 'relative', cursor: 'text' }}
+                >
+                  <input
+                    inputMode="decimal"
+                    autoComplete="off"
+                    type="text"
+                    className={style.transferPropInput + ' text-right amount--lower'}
+                    placeholder="0.0"
+                    pattern="^[0-9]*[.,]?[0-9]*$"
+                    value={amountIn}
+                    onFocus={() => setEditing(true)}
+                    onBlur={() => setEditing(false)}
+                    onChange={(e) => {
+                      setAmountIn(e.target.value)
+                      setLastEdited('in')
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 11,
+                      color: 'rgba(230,238,250,0.90)',
+                      textAlign: 'right',
+                    }}
+                  >
+                    {usdUnderPay}
+                  </div>
+                  {(!amountIn || Number(toNum(amountIn)) === 0)
+                    ? null
+                    : insufficientBalance && (
+                        <div
+                          style={{
+                            marginTop: 6,
+                            fontSize: 12,
+                            color: '#ef4444',
+                            textAlign: 'right',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Insufficient balance
+                        </div>
+                      )}
+                  {sameTokenSelected && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 12,
+                        color: '#ef4444',
+                        textAlign: 'right',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Select a different token
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Flip */}
+              <div style={centerArrowWrap}>
+                <button
+                  style={centerArrowBtn}
+                  className="flip-btn"
+                  onClick={flip}
+                  aria-label="Switch tokens"
+                >
+                  ⇅
+                </button>
+              </div>
+
+              {/* You receive */}
+              <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
+                <div className="row-title">You receive</div>
+
+                <div className="balance-pill">
+                  <span>
+                    Balance{' '}
+                    {rcvRB
+                      ? `${Number(rcvRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${rcvToken.symbol}`
+                      : '-'}
+                  </span>
+                </div>
+
+                <div className={style.currencySelector}>
+                  <button
+                    className="token-select token-select--clean"
+                    onClick={() => openSelector('receive')}
+                  >
+                    <img
+                      className="token-icon"
+                      src={iconSrc(rcvToken)}
+                      alt={rcvToken.symbol}
+                      onError={iconFallback}
+                    />
+                    <span className="token-ticker">{rcvToken.symbol}</span>
+                    <AiOutlineDown
+                      className="token-chevron"
+                      style={{ opacity: 0.9, fontSize: 14, marginLeft: 6 }}
+                    />
+                  </button>
+                </div>
+
+                <div
+                  className="amount-input flex-1 text-right"
+                  style={{ position: 'relative', cursor: 'text' }}
+                >
+                  <input
+                    inputMode="decimal"
+                    autoComplete="off"
+                    type="text"
+                    className={style.transferPropInput + ' text-right amount--lower'}
+                    placeholder="0.0"
+                    value={amountOut}
+                    onFocus={() => setEditing(true)}
+                    onBlur={() => setEditing(false)}
+                    onChange={(e) => {
+                      setAmountOut(e.target.value)
+                      setLastEdited('out')
+                    }}
+                    readOnly={false}
+                  />
+
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 11,
+                      color: 'rgba(230,238,250,0.90)',
+                      textAlign: 'right',
+                    }}
+                  >
+                    {usdUnderRcv}
+                  </div>
+                </div>
+              </div>
+
+              {/* Azione principale */}
+              <div className="actions">
+                <SwapActionButton
+                  onSwap={openPreview}
+                  disabled={isLoading || !formValid}
+                  labelSwap="Swap"
+                />
+              </div>
+
+              {/* Unico pulsante chiaro per i Limit Orders (sempre cliccabile) */}
+              <div className="mt-3">
+                <button
+                  className="w-full h-[44px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold hover:bg-[rgba(255,255,255,.12)]"
+                  onClick={() => setLimitOpen(true)}
+                >
+                  Limit Orders
+                </button>
+              </div>
+
+              {/* Modal Limit Orders */}
+              <LimitOrdersModal
+                open={limitOpen}
+                onClose={() => setLimitOpen(false)}
+                prefill={{
+                  sell: payToken,
+                  buy: rcvToken,
+                  amountIn: amountIn || '',
+                  useCurrentOnOpen: true,
+                }}
+              />
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Flip */}
-      <div style={centerArrowWrap}>
-        <button
-          style={centerArrowBtn}
-          className="flip-btn"
-          onClick={flip}
-          aria-label="Switch tokens"
-        >
-          ⇅
-        </button>
-      </div>
-
-      {/* You receive */}
-      <div className={`${style.transferPropContainer} bls-row bls-row--thick justify-between`}>
-        <div className="row-title">You receive</div>
-
-        <div className="balance-pill">
-          <span>
-            Balance{' '}
-            {rcvRB
-              ? `${Number(rcvRB.formatted).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${rcvToken.symbol}`
-              : '-'}
-          </span>
-        </div>
-
-        <div className={style.currencySelector}>
-          <button
-            className="token-select token-select--clean"
-            onClick={() => openSelector('receive')}
-          >
-            <img
-              className="token-icon"
-              src={iconSrc(rcvToken)}
-              alt={rcvToken.symbol}
-              onError={iconFallback}
-            />
-            <span className="token-ticker">{rcvToken.symbol}</span>
-            <AiOutlineDown
-              className="token-chevron"
-              style={{ opacity: 0.9, fontSize: 14, marginLeft: 6 }}
-            />
-          </button>
-        </div>
-
-        <div
-          className="amount-input flex-1 text-right"
-          style={{ position: 'relative', cursor: 'text' }}
-        >
-          <input
-            inputMode="decimal"
-            autoComplete="off"
-            type="text"
-            className={style.transferPropInput + ' text-right amount--lower'}
-            placeholder="0.0"
-            value={amountOut}
-            onFocus={() => setEditing(true)}
-            onBlur={() => setEditing(false)}
-            onChange={(e) => {
-              setAmountOut(e.target.value)
-              setLastEdited('out')
-            }}
-            readOnly={false}
-          />
-
-          <div
-            style={{
-              marginTop: 4,
-              fontSize: 11,
-              color: 'rgba(230,238,250,0.90)',
-              textAlign: 'right',
-            }}
-          >
-            {usdUnderRcv}
           </div>
-        </div>
-      </div>
-
-      {/* Azione */}
-      <div className="actions">
-        <SwapActionButton
-          onSwap={openPreview}
-          disabled={isLoading || !formValid}
-          labelSwap="Swap"
-        />
-      </div>
-{/* ⬇️ NUOVA BARRA: identica per dimensioni/stile a una tab grande */}
-<div className="mt-4 grid grid-cols-2 gap-2">
-  <div className="h-[44px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold select-none">
-    Swap
-  </div>
-<button
-  className="h-[44px] rounded-xl border border-[rgba(120,170,240,.55)] bg-[rgba(255,255,255,.06)] backdrop-blur-[6px] flex items-center justify-center font-semibold hover:bg-[rgba(255,255,255,.12)]"
-  onClick={() => {
-    // Non aprire se i campi base non sono popolati in modo valido
-    const ai = String(amountIn || '').replace(',', '.')
-    const validAmount = ai && Number(ai) > 0
-    const wrap = (t: Token) => (t.address === 'native' ? WPLS : t.address).toLowerCase()
-    const same = wrap(payToken) === wrap(rcvToken)
-    if (!validAmount || same) {
-      alert('Compila prima lo Swap: seleziona due token diversi e inserisci l’importo.')
-      return
-    }
-    setLimitOpen(true)
-  }}
->
-  Limit Order Swap
-</button>
-
-
-</div>
-
-{/* Modal Limit Orders con tab Create / My Orders */}
-<LimitOrdersModal
-  open={limitOpen}
-  onClose={() => setLimitOpen(false)}
-  prefill={{
-    sell: payToken,
-    buy: rcvToken,
-    amountIn: amountIn || '',
-    useCurrentOnOpen: true, // Target = Current all’open (autofill)
-  }}
-/>
-
-
-
-
-    </div>
-  </div>
-)}
-
+        )}
 
         {/* Loader TX legacy */}
         {router.query.loading ? (
@@ -1556,8 +1529,6 @@ const openPreview = async () => {
           priceImpactLabel={preview.priceImpactLabel || '—'}
         />
       </div>
-
-      
     </>
   )
 }
